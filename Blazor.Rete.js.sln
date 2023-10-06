@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.4.33213.308
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Blazor.Rete.js", "Blazor.Rete.js\Blazor.Rete.js.csproj", "{DA66E7EA-A9E2-4017-8782-05637B59669F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Playground.WebAssembly", "Playground.WebAssembly\Playground.WebAssembly.csproj", "{D77FD966-2A0B-4AA6-B115-2BCCF35BE221}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{DA66E7EA-A9E2-4017-8782-05637B59669F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DA66E7EA-A9E2-4017-8782-05637B59669F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DA66E7EA-A9E2-4017-8782-05637B59669F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DA66E7EA-A9E2-4017-8782-05637B59669F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D77FD966-2A0B-4AA6-B115-2BCCF35BE221}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D77FD966-2A0B-4AA6-B115-2BCCF35BE221}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D77FD966-2A0B-4AA6-B115-2BCCF35BE221}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D77FD966-2A0B-4AA6-B115-2BCCF35BE221}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {1F7548FE-AFC4-4A66-A6F9-9723C4270521}
+	EndGlobalSection
+EndGlobal

@@ -12,22 +12,16 @@
   </ItemGroup>
 
   <ItemGroup>
-    <TypeScriptCompile Include="wwwroot\ts\reteApp.tsx" />
-    <TypeScriptCompile Include="wwwroot\ts\reteEditor.tsx" />
-    <TypeScriptCompile Include="wwwroot\ts\reteInterop.tsx" />
-   
+    <_ContentIncludedByDefault Remove="wwwroot\ts\reactInterop.tsx" />
+    <_ContentIncludedByDefault Remove="wwwroot\ts\reteApp.tsx" />
+    <_ContentIncludedByDefault Remove="wwwroot\ts\reteEditor.tsx" />
+    <_ContentIncludedByDefault Remove="wwwroot\ts\reteInterop.tsx" />
+    <_ContentIncludedByDefault Remove="wwwroot\ts\sweetAlertInterop.ts" />
+    <_ContentIncludedByDefault Remove="wwwroot\sample-data\weather.json" />
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Controls\" />
-    <Folder Include="wwwroot\js\" />
+    <ProjectReference Include="..\Blazor.Rete.js\Blazor.Rete.js.csproj" />
   </ItemGroup>
   
-  <Target Name="NPM Install" AfterTargets="PreBuildEvent">
-    <Exec Command="npm install" />
-  </Target>
-
-  <Target Name="NPM Build" AfterTargets="NPM Install" >
-    <Exec Command="npm run build" />
-  </Target>
 </Project>

@@ -1,4 +1,4 @@
-using BlazorTypescriptInterop;
+using Playground.WebAssembly;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 
