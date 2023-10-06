@@ -1,0 +1,44 @@
+{
+	"name": "testapp-svelte",
+	"version": "0.0.1",
+	"scripts": {
+		"dev": "vite dev",
+		"build": "vite build",
+		"preview": "vite preview",
+		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch"
+	},
+	"devDependencies": {
+		"@fontsource/fira-mono": "^4.5.10",
+		"@neoconfetti/svelte": "^1.0.0",
+		"@sveltejs/adapter-auto": "^2.0.0",
+		"@sveltejs/kit": "^1.25.1",
+		"@types/cookie": "^0.5.1",
+		"svelte": "^4.2.1",
+		"svelte-check": "^3.0.1",
+		"tslib": "^2.4.1",
+		"typescript": "^5.0.0",
+		"vite": "^4.3.0"
+	},
+	"type": "module",
+	"dependencies": {
+		"@sveltejs/adapter-static": "^2.0.3",
+		"@types/three": "^0.156.0",
+		"elkjs": "^0.8.2",
+		"rete": "^2.0.2",
+		"rete-area-3d-plugin": "^2.0.3",
+		"rete-area-plugin": "^2.0.1",
+		"rete-auto-arrange-plugin": "^2.0.0",
+		"rete-connection-plugin": "^2.0.0",
+		"rete-connection-reroute-plugin": "^2.0.0",
+		"rete-context-menu-plugin": "^2.0.0",
+		"rete-engine": "^2.0.0",
+		"rete-minimap-plugin": "^2.0.1",
+		"rete-readonly-plugin": "^2.0.0",
+		"rete-render-utils": "^2.0.1",
+		"rete-svelte-plugin": "^2.0.0",
+		"sass": "^1.69.0",
+		"three": "^0.156.1",
+		"web-worker": "^1.2.0"
+	}
+}

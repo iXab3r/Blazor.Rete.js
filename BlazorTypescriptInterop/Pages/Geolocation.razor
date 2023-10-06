@@ -1,0 +1,39 @@
+﻿@page "/geolocation"
+@using BlazorTypescriptInterop.Models;
+@inject IJSRuntime JS
+@implements IAsyncDisposable
+
+<PageTitle>Weather forecast</PageTitle>
+
+<h1>Geolocation</h1>
+@if (geolocation == null)
+{
+    <p>Geolocation not available</p>
+}
+else
+{
+    <p>Lat: @geolocation.Coords.Latitude Long: @geolocation.Coords.Longitude </p>
+}
+
+
+@code {
+    private IJSObjectReference? module;
+    private GeolocationPosition? geolocation;
+
+    protected override async Task OnInitializedAsync()
+    {
+        module = await JS.InvokeAsync<IJSObjectReference>("import", "./Pages/Geolocation.razor.js");
+
+        geolocation = await module.InvokeAsync<GeolocationPosition>("getCurrentPosition", null);
+
+        await base.OnInitializedAsync();
+    }
+
+    async ValueTask IAsyncDisposable.DisposeAsync()
+    {
+        if (module != null)
+        {
+            await module.DisposeAsync();
+        }
+    }
+}
