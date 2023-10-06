@@ -1,0 +1,26 @@
+﻿@inject IJSRuntime JS
+
+<button class="btn btn-primary" @onclick="@(async () => await reteEditorFacade.AddNode(Guid.NewGuid().ToString()))">Click me</button>
+<div @ref="editorAreaRef" id="@($"rete-editor-{Guid.NewGuid()}")" class="rete-editor-container"></div>
+
+@code {
+    private ElementReference editorAreaRef;
+    private IJSObjectReference? reactModule;
+    private IJSObjectReference? reteModule;
+    private ReteEditorFacade reteEditorFacade;
+    
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await base.OnAfterRenderAsync(firstRender);
+
+        if (firstRender)
+        {
+            reteModule = (await JS.InvokeAsync<IJSObjectReference>("import", "./_content/Blazor.Rete.js/js/reteInterop.js"))
+                         ?? throw new FileLoadException("Failed to load Rete JS module");
+            var editorReference = await reteModule!.InvokeAsync<IJSObjectReference>("renderEditor", editorAreaRef)
+                         ?? throw new ArgumentException("Failed to initialize Rete.js editor");
+            reteEditorFacade = new ReteEditorFacade(editorReference); 
+            await reteEditorFacade.Setup();
+        }
+    }
+}
