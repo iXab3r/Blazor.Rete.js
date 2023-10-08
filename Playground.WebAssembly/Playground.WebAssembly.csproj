@@ -1,27 +1,31 @@
 <Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
 
-  <PropertyGroup>
-    <TargetFramework>net7.0</TargetFramework>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
-  </PropertyGroup>
+    <PropertyGroup>
+        <TargetFramework>net7.0</TargetFramework>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+    </PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="7.0.2" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="7.0.2" PrivateAssets="all" />
-  </ItemGroup>
+    <PropertyGroup>
+        <EnableDefaultContentItems>true</EnableDefaultContentItems>
+    </PropertyGroup>
 
-  <ItemGroup>
-    <_ContentIncludedByDefault Remove="wwwroot\ts\reactInterop.tsx" />
-    <_ContentIncludedByDefault Remove="wwwroot\ts\reteApp.tsx" />
-    <_ContentIncludedByDefault Remove="wwwroot\ts\reteEditor.tsx" />
-    <_ContentIncludedByDefault Remove="wwwroot\ts\reteInterop.tsx" />
-    <_ContentIncludedByDefault Remove="wwwroot\ts\sweetAlertInterop.ts" />
-    <_ContentIncludedByDefault Remove="wwwroot\sample-data\weather.json" />
-  </ItemGroup>
+    <ItemGroup>
+        <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="7.0.2"/>
+        <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="7.0.2" PrivateAssets="all"/>
+    </ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\Blazor.Rete.js\Blazor.Rete.js.csproj" />
-  </ItemGroup>
-  
+    <ItemGroup>
+        <_ContentIncludedByDefault Remove="wwwroot\ts\reactInterop.tsx"/>
+        <_ContentIncludedByDefault Remove="wwwroot\ts\reteApp.tsx"/>
+        <_ContentIncludedByDefault Remove="wwwroot\ts\reteEditor.tsx"/>
+        <_ContentIncludedByDefault Remove="wwwroot\ts\reteInterop.tsx"/>
+        <_ContentIncludedByDefault Remove="wwwroot\ts\sweetAlertInterop.ts"/>
+        <_ContentIncludedByDefault Remove="wwwroot\sample-data\weather.json"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Blazor.Rete.js\Blazor.Rete.js.csproj"/>
+    </ItemGroup>
+
 </Project>

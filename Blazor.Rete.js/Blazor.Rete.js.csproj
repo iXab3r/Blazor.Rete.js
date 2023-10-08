@@ -4,24 +4,36 @@
         <TargetFramework>net7.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
+        <RazorLangVersion>3.0</RazorLangVersion>
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="7.0.2" />
-        <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="7.0.2" PrivateAssets="all" />
+        <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="7.0.2"/>
+        <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="7.0.2" PrivateAssets="all"/>
+        <PackageReference Include="PropertyChanged.Fody" Version="4.1.0"/>
+        <PackageReference Include="ReactiveUI" Version="18.0.10"/>
     </ItemGroup>
 
+    <ItemGroup>
+        <Folder Include="wwwroot\js\"/>
+    </ItemGroup>
 
 
     <ItemGroup>
-      <Folder Include="wwwroot\js\" />
+        <SupportedPlatform Include="browser" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Compile Update="BlazorReteEditor.cs">
+        <DependentUpon>BlazorReteEditor.razor</DependentUpon>
+      </Compile>
     </ItemGroup>
 
     <Target Name="NPM Install" AfterTargets="PreBuildEvent">
-        <Exec Command="npm install" />
+        <Exec Command="npm install"/>
     </Target>
 
-    <Target Name="NPM Build" AfterTargets="NPM Install" >
-        <Exec Command="npm run build" />
+    <Target Name="NPM Build" AfterTargets="NPM Install">
+        <Exec Command="npm run build"/>
     </Target>
 </Project>

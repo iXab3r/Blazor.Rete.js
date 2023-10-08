@@ -1,8 +1,9 @@
-﻿import { createRoot } from "react-dom/client";
-import {StrictMode} from "react";
+﻿import {createRoot} from "react-dom/client";
 import * as React from "react";
+import {StrictMode} from "react";
 import ReteApp from "./reteApp";
-import {getEditor, ReteEditorWrapper} from "./reteEditor";
+import {getEditor} from "./reteEditor";
+import {ReteEditorWrapper} from "./reteEditorWrapper";
 
 // Function to create the Rete editor element
 export async function createEditorElement(container: HTMLElement): Promise<void> {
@@ -10,7 +11,7 @@ export async function createEditorElement(container: HTMLElement): Promise<void>
     const root = createRoot(container!);
     root.render(
         <StrictMode>
-            <ReteApp id={container.id} />
+            <ReteApp id={container.id}/>
         </StrictMode>
     );
 }
@@ -24,12 +25,12 @@ export async function retrieveEditor(container: HTMLElement): Promise<ReteEditor
 
         const pollForEditor = () => {
             const editor = getEditor(container);
-            if(editor) {
+            if (editor) {
                 console.info(`Retrieved Rete editor: ${editor}`);
                 resolve(editor);
             } else {
                 totalWaitTime += interval;
-                if(totalWaitTime >= timeout) {
+                if (totalWaitTime >= timeout) {
                     reject("Editor retrieval timeout");
                 } else {
                     setTimeout(pollForEditor, interval);

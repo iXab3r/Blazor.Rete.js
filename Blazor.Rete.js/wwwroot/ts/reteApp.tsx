@@ -1,6 +1,7 @@
 ﻿import React = require("react");
-import { createEditor } from "./reteEditor";
-import { useRete } from "rete-react-plugin";
+import {createEditor} from "./reteEditor";
+import {useRete} from "rete-react-plugin";
+import * as Utils from './utils'
 
 export type ReteAppProps = {
     id: string;
@@ -8,9 +9,9 @@ export type ReteAppProps = {
 
 export default function ReteApp(props: ReteAppProps) {
     const [ref, editor] = useRete(createEditor);
-    
+
     return (
-        <div id={props.id} className="ReteApp" ref={ref} style={{ height: "100%", width: "100%" }}></div>
+        <div id={props.id} className="ReteApp" ref={ref} style={{height: "100%", width: "100%"}}></div>
     );
 }
  
