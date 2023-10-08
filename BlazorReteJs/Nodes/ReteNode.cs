@@ -1,7 +1,7 @@
-﻿using Blazor.Rete.js.Scaffolding;
+﻿using BlazorReteJs.Scaffolding;
 using Microsoft.JSInterop;
 
-namespace Blazor.Rete.js.Nodes;
+namespace BlazorReteJs.Nodes;
 
 public class ReteNode
 {

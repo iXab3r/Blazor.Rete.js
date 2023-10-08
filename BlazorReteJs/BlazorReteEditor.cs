@@ -1,8 +1,8 @@
-﻿using Blazor.Rete.js.Nodes;
+﻿using BlazorReteJs.Nodes;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 
-namespace Blazor.Rete.js;
+namespace BlazorReteJs;
 
 public partial class BlazorReteEditor
 {
@@ -27,7 +27,7 @@ public partial class BlazorReteEditor
 
     private async Task HandleLoaded()
     {
-        reteModule = (await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./_content/Blazor.Rete.js/js/reteInterop.js"))
+        reteModule = (await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./_content/BlazorReteJs/js/reteInterop.js"))
                      ?? throw new FileLoadException("Failed to load Rete JS module");
         var editorReference = await reteModule!.InvokeAsync<IJSObjectReference>("renderEditor", editorAreaRef)
                               ?? throw new ArgumentException("Failed to initialize Rete.js editor");

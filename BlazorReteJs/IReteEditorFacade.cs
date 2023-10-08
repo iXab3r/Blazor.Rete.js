@@ -1,6 +1,6 @@
 ﻿using Microsoft.JSInterop;
 
-namespace Blazor.Rete.js;
+namespace BlazorReteJs;
 
 public interface IReteEditorFacade : IDisposable
 {

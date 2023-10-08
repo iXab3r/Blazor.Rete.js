@@ -1,4 +1,4 @@
-﻿@using Blazor.Rete.js
+﻿@using BlazorReteJs
 @page "/"
 @inject IJSRuntime JS
 
@@ -24,7 +24,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        sweetAlertModule = await JS.InvokeAsync<IJSObjectReference>("import", "/_content/Blazor.Rete.js/js/sweetAlertInterop.js");
+        sweetAlertModule = await JS.InvokeAsync<IJSObjectReference>("import", "/_content/BlazorReteJs/js/sweetAlertInterop.js");
         await base.OnInitializedAsync();
     }
 }

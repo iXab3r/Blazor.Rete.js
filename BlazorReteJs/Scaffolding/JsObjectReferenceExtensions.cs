@@ -1,7 +1,6 @@
-namespace Blazor.Rete.js.Scaffolding;
-
 using Microsoft.JSInterop;
-using System.Threading.Tasks;
+
+namespace BlazorReteJs.Scaffolding;
 
 public static class JsObjectReferenceExtensions
 {

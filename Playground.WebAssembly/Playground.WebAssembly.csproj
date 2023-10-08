@@ -4,9 +4,6 @@
         <TargetFramework>net7.0</TargetFramework>
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
-    </PropertyGroup>
-
-    <PropertyGroup>
         <EnableDefaultContentItems>true</EnableDefaultContentItems>
     </PropertyGroup>
 
@@ -24,8 +21,9 @@
         <_ContentIncludedByDefault Remove="wwwroot\sample-data\weather.json"/>
     </ItemGroup>
 
+
     <ItemGroup>
-        <ProjectReference Include="..\Blazor.Rete.js\Blazor.Rete.js.csproj"/>
+      <ProjectReference Include="..\BlazorReteJs\BlazorReteJs.csproj" />
     </ItemGroup>
 
 </Project>
