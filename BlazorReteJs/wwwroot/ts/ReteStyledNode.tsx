@@ -8,6 +8,9 @@ const customStyles = css<{ selected?: boolean, isActive?: boolean }>`
 
   .title {
     color: #bb2020;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    overflow: hidden;
   }
 
   &:hover {

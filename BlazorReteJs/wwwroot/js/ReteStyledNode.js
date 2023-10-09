@@ -27299,6 +27299,9 @@ var customStyles = nt`
 
   .title {
     color: #bb2020;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    overflow: hidden;
   }
 
   &:hover {

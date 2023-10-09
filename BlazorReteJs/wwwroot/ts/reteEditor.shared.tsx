@@ -1,8 +1,8 @@
 ﻿import {ClassicPreset, GetSchemes} from "rete";
 
 export class Node extends ClassicPreset.Node {
-    width = 180;
-    height = 120;
+    width: number = 180;   
+    height: number = 120;
     isActive: boolean;
 }
 

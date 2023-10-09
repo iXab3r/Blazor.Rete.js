@@ -8,10 +8,27 @@
 
         <button class="btn btn-primary" @onclick="(() => currentCount++)">Click me</button>
         <button class="btn btn-secondary" @onclick="@(async () => await sweetAlertModule.InvokeVoidAsync("showAlert", "test"))">Notification</button>
+        <div class="hstack">
+            JavaScript
+            <button class="btn btn-primary" @onclick="@(async () => await editor.JsEditor.AddNode($"JS-{Guid.NewGuid().ToString()}"))">Add Node</button>
+            <button class="btn btn-primary" @onclick="@(async () => await editor.JsEditor.ArrangeNodes(false))">Arrange</button>
+            <button class="btn btn-primary" @onclick="@(async () => await editor.JsEditor.ArrangeNodes(true))">Arrange Animated</button>
+            <button class="btn btn-primary" @onclick="@(async () => await editor.JsEditor.ZoomAtNodes())">ZoomAt Nodes</button>
+            <button class="btn btn-primary" @onclick="@(async () => await editor.JsEditor.EditorRef.InvokeVoidAsync("toggleIsActive"))">Toggle IsActive</button>
+        </div>
+        <div class="hstack">
+            CS
+            <button class="btn btn-primary" @onclick="@(async () => await editor.AddNode($"CS-{Guid.NewGuid().ToString()}"))">Add Node</button>
+            <button class="btn btn-primary" @onclick="@(async () => {
+                                                                        var firstNode = await editor.AddNode($"CS-{Guid.NewGuid().ToString()}"); 
+                                                                        var secondNode = await editor.AddNode($"CS-{Guid.NewGuid().ToString()}"); await editor.AddConnection(firstNode, secondNode); })">Add Connection</button>
+            <button class="btn btn-primary" @onclick="@(async () => await editor.ToggleActive())">Toggle IsActive</button>
+            <button class="btn btn-primary" @onclick="@(async () => await editor.Clear())">Clear</button>
+
+        </div>
     </div>
     <div class="flex-grow-1 w-100">
-        <BlazorReteEditor/>
-
+        <BlazorReteEditor @ref="editor"/>
     </div>
     <div class="w-100">
         <p role="status">Current count: @currentCount</p>
@@ -22,9 +39,12 @@
     private IJSObjectReference? sweetAlertModule;
     private int currentCount = 0;
 
+    private BlazorReteEditor editor;
+
     protected override async Task OnInitializedAsync()
     {
         sweetAlertModule = await JS.InvokeAsync<IJSObjectReference>("import", "/_content/BlazorReteJs/js/sweetAlertInterop.js");
         await base.OnInitializedAsync();
     }
+
 }

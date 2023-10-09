@@ -120694,6 +120694,9 @@ var customStyles = nt`
 
   .title {
     color: #bb2020;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    overflow: hidden;
   }
 
   &:hover {
@@ -120892,6 +120895,291 @@ var StandardApplier = /* @__PURE__ */ function(_Applier) {
   }]);
   return StandardApplier2;
 }(Applier);
+var AnimationSystem = /* @__PURE__ */ function() {
+  function AnimationSystem2() {
+    _classCallCheck(this, AnimationSystem2);
+    _defineProperty(this, "activeAnimations", /* @__PURE__ */ new Map());
+  }
+  _createClass(AnimationSystem2, [{
+    key: "start",
+    value: function start() {
+      var _this = this;
+      var entries = Array.from(this.activeAnimations.entries());
+      entries.forEach(function(_ref) {
+        var _ref2 = _slicedToArray(_ref, 2), key = _ref2[0], _ref2$ = _ref2[1], startTime = _ref2$.startTime, duration = _ref2$.duration, cb = _ref2$.cb, done = _ref2$.done;
+        var t = (Date.now() - startTime) / duration;
+        if (t >= 1)
+          t = 1;
+        if (t < 0 || t >= 1) {
+          _this.activeAnimations["delete"](key);
+          if (t >= 1) {
+            cb(1);
+            done(true);
+          }
+          return;
+        }
+        cb(t);
+      });
+      this.frameId = requestAnimationFrame(function() {
+        return _this.start();
+      });
+    }
+  }, {
+    key: "add",
+    value: function() {
+      var _add = _asyncToGenerator(/* @__PURE__ */ import_regenerator5.default.mark(function _callee(duration, id, tick) {
+        var _this2 = this;
+        var startTime;
+        return import_regenerator5.default.wrap(function _callee$(_context) {
+          while (1)
+            switch (_context.prev = _context.next) {
+              case 0:
+                startTime = Date.now();
+                return _context.abrupt("return", new Promise(function(done) {
+                  _this2.activeAnimations.set(id, {
+                    startTime,
+                    duration,
+                    cb: tick,
+                    done
+                  });
+                }));
+              case 2:
+              case "end":
+                return _context.stop();
+            }
+        }, _callee);
+      }));
+      function add(_x, _x2, _x3) {
+        return _add.apply(this, arguments);
+      }
+      return add;
+    }()
+  }, {
+    key: "cancel",
+    value: function cancel(key) {
+      var _this$activeAnimation;
+      (_this$activeAnimation = this.activeAnimations.get(key)) === null || _this$activeAnimation === void 0 ? void 0 : _this$activeAnimation.done(false);
+      this.activeAnimations["delete"](key);
+    }
+  }, {
+    key: "stop",
+    value: function stop() {
+      if (typeof this.frameId !== "undefined")
+        cancelAnimationFrame(this.frameId);
+    }
+  }]);
+  return AnimationSystem2;
+}();
+function ownKeys$13(object, enumerableOnly) {
+  var keys = Object.keys(object);
+  if (Object.getOwnPropertySymbols) {
+    var symbols = Object.getOwnPropertySymbols(object);
+    enumerableOnly && (symbols = symbols.filter(function(sym) {
+      return Object.getOwnPropertyDescriptor(object, sym).enumerable;
+    })), keys.push.apply(keys, symbols);
+  }
+  return keys;
+}
+function _objectSpread$13(target) {
+  for (var i2 = 1; i2 < arguments.length; i2++) {
+    var source = null != arguments[i2] ? arguments[i2] : {};
+    i2 % 2 ? ownKeys$13(Object(source), true).forEach(function(key) {
+      _defineProperty(target, key, source[key]);
+    }) : Object.getOwnPropertyDescriptors ? Object.defineProperties(target, Object.getOwnPropertyDescriptors(source)) : ownKeys$13(Object(source)).forEach(function(key) {
+      Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key));
+    });
+  }
+  return target;
+}
+function _createSuper$13(Derived) {
+  var hasNativeReflectConstruct = _isNativeReflectConstruct$13();
+  return function _createSuperInternal() {
+    var Super = _getPrototypeOf(Derived), result;
+    if (hasNativeReflectConstruct) {
+      var NewTarget = _getPrototypeOf(this).constructor;
+      result = Reflect.construct(Super, arguments, NewTarget);
+    } else {
+      result = Super.apply(this, arguments);
+    }
+    return _possibleConstructorReturn(this, result);
+  };
+}
+function _isNativeReflectConstruct$13() {
+  if (typeof Reflect === "undefined" || !Reflect.construct)
+    return false;
+  if (Reflect.construct.sham)
+    return false;
+  if (typeof Proxy === "function")
+    return true;
+  try {
+    Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function() {
+    }));
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+var TransitionApplier = /* @__PURE__ */ function(_StandardApplier) {
+  _inherits(TransitionApplier2, _StandardApplier);
+  var _super = _createSuper$13(TransitionApplier2);
+  function TransitionApplier2(props) {
+    var _this;
+    _classCallCheck(this, TransitionApplier2);
+    _this = _super.call(this);
+    _defineProperty(_assertThisInitialized(_this), "animation", new AnimationSystem());
+    _this.props = props;
+    _this.duration = typeof (props === null || props === void 0 ? void 0 : props.duration) !== "undefined" ? props.duration : 2e3;
+    _this.timingFunction = typeof (props === null || props === void 0 ? void 0 : props.timingFunction) !== "undefined" ? props.timingFunction : function(t) {
+      return t;
+    };
+    _this.animation.start();
+    return _this;
+  }
+  _createClass(TransitionApplier2, [{
+    key: "applyTiming",
+    value: function applyTiming(from2, to, t) {
+      var k2 = this.timingFunction(t);
+      return from2 * (1 - k2) + to * k2;
+    }
+  }, {
+    key: "resizeNode",
+    value: function() {
+      var _resizeNode = _asyncToGenerator(/* @__PURE__ */ import_regenerator5.default.mark(function _callee(id, width, height) {
+        var _this2 = this;
+        var node2, previous;
+        return import_regenerator5.default.wrap(function _callee$(_context) {
+          while (1)
+            switch (_context.prev = _context.next) {
+              case 0:
+                node2 = this.editor.getNode(id);
+                if (node2) {
+                  _context.next = 3;
+                  break;
+                }
+                return _context.abrupt("return", false);
+              case 3:
+                previous = {
+                  width: node2.width,
+                  height: node2.height
+                };
+                _context.next = 6;
+                return this.animation.add(this.duration, "".concat(id, "_resize"), function(t) {
+                  var _this2$props;
+                  var currentWidth = _this2.applyTiming(previous.width, width, t);
+                  var currentHeight = _this2.applyTiming(previous.height, height, t);
+                  ((_this2$props = _this2.props) === null || _this2$props === void 0 ? void 0 : _this2$props.onTick) && _this2.props.onTick(t);
+                  return _get(_getPrototypeOf(TransitionApplier2.prototype), "resizeNode", _this2).call(_this2, id, currentWidth, currentHeight);
+                });
+              case 6:
+                return _context.abrupt("return", _context.sent);
+              case 7:
+              case "end":
+                return _context.stop();
+            }
+        }, _callee, this);
+      }));
+      function resizeNode(_x, _x2, _x3) {
+        return _resizeNode.apply(this, arguments);
+      }
+      return resizeNode;
+    }()
+  }, {
+    key: "translateNode",
+    value: function() {
+      var _translateNode = _asyncToGenerator(/* @__PURE__ */ import_regenerator5.default.mark(function _callee2(id, x2, y2) {
+        var _this3 = this;
+        var view, previous;
+        return import_regenerator5.default.wrap(function _callee2$(_context2) {
+          while (1)
+            switch (_context2.prev = _context2.next) {
+              case 0:
+                view = this.area.nodeViews.get(id);
+                if (view) {
+                  _context2.next = 3;
+                  break;
+                }
+                return _context2.abrupt("return", false);
+              case 3:
+                previous = _objectSpread$13({}, view.position);
+                _context2.next = 6;
+                return this.animation.add(this.duration, "".concat(id, "_translate"), function(t) {
+                  var _this3$props;
+                  var currentX = _this3.applyTiming(previous.x, x2, t);
+                  var currentY = _this3.applyTiming(previous.y, y2, t);
+                  ((_this3$props = _this3.props) === null || _this3$props === void 0 ? void 0 : _this3$props.onTick) && _this3.props.onTick(t);
+                  return _get(_getPrototypeOf(TransitionApplier2.prototype), "translateNode", _this3).call(_this3, id, currentX, currentY);
+                });
+              case 6:
+                return _context2.abrupt("return", _context2.sent);
+              case 7:
+              case "end":
+                return _context2.stop();
+            }
+        }, _callee2, this);
+      }));
+      function translateNode(_x4, _x5, _x6) {
+        return _translateNode.apply(this, arguments);
+      }
+      return translateNode;
+    }()
+  }, {
+    key: "cancel",
+    value: function cancel(id) {
+      this.animation.cancel("".concat(id, "_resize"));
+      this.animation.cancel("".concat(id, "_translate"));
+    }
+  }, {
+    key: "apply",
+    value: function() {
+      var _apply = _asyncToGenerator(/* @__PURE__ */ import_regenerator5.default.mark(function _callee3(nodes) {
+        var _this4 = this;
+        var offset, correctNodes, _args3 = arguments;
+        return import_regenerator5.default.wrap(function _callee3$(_context3) {
+          while (1)
+            switch (_context3.prev = _context3.next) {
+              case 0:
+                offset = _args3.length > 1 && _args3[1] !== void 0 ? _args3[1] : {
+                  x: 0,
+                  y: 0
+                };
+                correctNodes = this.getValidShapes(nodes);
+                _context3.next = 4;
+                return Promise.all(correctNodes.map(function(_ref) {
+                  var _this4$props;
+                  var id = _ref.id, x2 = _ref.x, y2 = _ref.y, width = _ref.width, height = _ref.height, children = _ref.children;
+                  var hasChilden = children && children.length;
+                  var needsLayout = (_this4$props = _this4.props) !== null && _this4$props !== void 0 && _this4$props.needsLayout ? _this4.props.needsLayout(id) : true;
+                  var forceSelf = !hasChilden || needsLayout;
+                  return Promise.all([hasChilden && _this4.apply(children, {
+                    x: offset.x + x2,
+                    y: offset.y + y2
+                  }), forceSelf && _this4.resizeNode(id, width, height), forceSelf && _this4.translateNode(id, offset.x + x2, offset.y + y2)]);
+                }));
+              case 4:
+              case "end":
+                return _context3.stop();
+            }
+        }, _callee3, this);
+      }));
+      function apply(_x7) {
+        return _apply.apply(this, arguments);
+      }
+      return apply;
+    }()
+  }, {
+    key: "destroy",
+    value: function destroy() {
+      this.animation.stop();
+    }
+  }]);
+  return TransitionApplier2;
+}(StandardApplier);
+var index$22 = /* @__PURE__ */ Object.freeze({
+  __proto__: null,
+  Applier,
+  StandardApplier,
+  TransitionApplier
+});
 var setup2 = function setup3(props) {
   return function() {
     return {
@@ -121509,8 +121797,8 @@ function syncConnections(sockets, editor) {
     }
   };
 }
-function _createSuper$13(Derived) {
-  var hasNativeReflectConstruct = _isNativeReflectConstruct$13();
+function _createSuper$14(Derived) {
+  var hasNativeReflectConstruct = _isNativeReflectConstruct$14();
   return function _createSuperInternal() {
     var Super = _getPrototypeOf(Derived), result;
     if (hasNativeReflectConstruct) {
@@ -121522,7 +121810,7 @@ function _createSuper$13(Derived) {
     return _possibleConstructorReturn(this, result);
   };
 }
-function _isNativeReflectConstruct$13() {
+function _isNativeReflectConstruct$14() {
   if (typeof Reflect === "undefined" || !Reflect.construct)
     return false;
   if (Reflect.construct.sham)
@@ -121539,7 +121827,7 @@ function _isNativeReflectConstruct$13() {
 }
 var Picked = /* @__PURE__ */ function(_State) {
   _inherits(Picked2, _State);
-  var _super = _createSuper$13(Picked2);
+  var _super = _createSuper$14(Picked2);
   function Picked2(initial, params) {
     var _this;
     _classCallCheck(this, Picked2);
@@ -121596,7 +121884,7 @@ var Picked = /* @__PURE__ */ function(_State) {
 }(State);
 var PickedExisting = /* @__PURE__ */ function(_State2) {
   _inherits(PickedExisting2, _State2);
-  var _super2 = _createSuper$13(PickedExisting2);
+  var _super2 = _createSuper$14(PickedExisting2);
   function PickedExisting2(connection, params, context) {
     var _this2;
     _classCallCheck(this, PickedExisting2);
@@ -121700,7 +121988,7 @@ var PickedExisting = /* @__PURE__ */ function(_State2) {
 }(State);
 var Idle = /* @__PURE__ */ function(_State3) {
   _inherits(Idle2, _State3);
-  var _super3 = _createSuper$13(Idle2);
+  var _super3 = _createSuper$14(Idle2);
   function Idle2(params) {
     var _this4;
     _classCallCheck(this, Idle2);
@@ -122100,20 +122388,45 @@ var ConnectionPlugin = /* @__PURE__ */ function(_Scope) {
   return ConnectionPlugin2;
 }(Scope);
 
+// wwwroot/ts/custom-background.ts
+function addCustomBackground(area) {
+  const background = document.createElement("div");
+  background.classList.add("background");
+  background.classList.add("fill-area");
+  area.area.content.add(background);
+}
+
 // wwwroot/ts/reteEditorWrapper.tsx
 var ReteEditorWrapper = class {
   constructor() {
     this.socket = new classic.Socket("socket");
+    this.selectedNodes = /* @__PURE__ */ new Set();
+  }
+  async addConnection(firstNodeId, secondNodeId) {
+    const firstNode = this.editor.getNode(firstNodeId);
+    const secondNode = this.editor.getNode(secondNodeId);
+    const connection = new classic.Connection(firstNode, "O", secondNode, "I");
+    if (await this.editor.addConnection(connection)) {
+      return connection;
+    } else {
+      throw `Failed to add connection ${firstNodeId} => ${secondNodeId}`;
+    }
   }
   async addNode(label) {
     const node2 = new Node2(label);
-    node2.addOutput("O", new classic.Output(this.socket));
-    node2.addInput("I", new classic.Input(this.socket));
+    node2.addOutput("O", new classic.Output(this.socket, void 0, true));
+    node2.addInput("I", new classic.Input(this.socket, void 0, true));
     if (await this.editor.addNode(node2)) {
       return node2;
     } else {
       throw "Failed to add node";
     }
+  }
+  async removeNode(nodeId) {
+    await this.editor.removeNode(nodeId);
+  }
+  async clear() {
+    await this.editor.clear();
   }
   toggleIsActive() {
     this.editor.getNodes().forEach((x2) => {
@@ -122121,11 +122434,30 @@ var ReteEditorWrapper = class {
       this.areaPlugin.update("node", x2.id);
     });
   }
+  updateNode(id) {
+    console.info(`Updating node: ${id}`);
+    this.areaPlugin.update("node", id);
+  }
+  getSelectedNodes() {
+    return this.editor.getNodes().filter((x2) => x2.selected);
+  }
+  getSelectedNodesIds() {
+    return this.getSelectedNodes().map((x2) => x2.id);
+  }
   zoomAtNodes() {
     index.zoomAt(this.areaPlugin, this.editor.getNodes());
   }
   async arrangeNodes(animate) {
-    await this.arrangePlugin.layout();
+    const area = this.areaPlugin;
+    const editor = this.editor;
+    const applier = new index$22.TransitionApplier({
+      duration: 500,
+      timingFunction: (t) => t,
+      async onTick() {
+        await index.zoomAt(area, editor.getNodes());
+      }
+    });
+    await this.arrangePlugin.layout({ applier: animate ? applier : void 0 });
   }
   async setup() {
     console.info(`Initializing editor`);
@@ -122145,12 +122477,15 @@ var ReteEditorWrapper = class {
       this.zoomAtNodes();
     }, 10);
   }
+  setDotnetEventsHandler(dotnetHelper) {
+    this.dotnetHelper = dotnetHelper;
+  }
   async init(container) {
     this.editor = new NodeEditor();
     this.areaPlugin = new AreaPlugin(container);
     this.connectionPlugin = new ConnectionPlugin();
     this.renderPlugin = new ReactPlugin({ createRoot: import_client.createRoot });
-    index.selectableNodes(this.areaPlugin, index.selector(), {
+    const nodeSelector = index.selectableNodes(this.areaPlugin, index.selector(), {
       accumulating: index.accumulateOnCtrl()
     });
     this.connectionPlugin.addPreset(index4.classic.setup());
@@ -122159,6 +122494,8 @@ var ReteEditorWrapper = class {
     this.areaPlugin.use(this.renderPlugin);
     this.arrangePlugin = new AutoArrangePlugin();
     this.arrangePlugin.addPreset(index3.classic.setup());
+    this.areaPlugin.use(this.arrangePlugin);
+    addCustomBackground(this.areaPlugin);
     this.renderPlugin.addPreset(index2.classic.setup({
       customize: {
         node() {
@@ -122166,10 +122503,53 @@ var ReteEditorWrapper = class {
         }
       }
     }));
+    this.editor.addPipe((context) => {
+      if (context.type === "nodecreated" || context.type === "noderemoved" || context.type === "cleared") {
+        console.info(`Context: ${context.type}, data: ${JSON.stringify(context)}`);
+        this.updateSelection();
+      }
+      return context;
+    });
+    this.areaPlugin.addPipe((context) => {
+      if (context.type === "nodepicked" || context.type === "render") {
+        console.info(`Context: ${context.type}`);
+        this.updateSelection();
+      }
+      return context;
+    });
     index.simpleNodesOrder(this.areaPlugin);
   }
   destroy() {
     this.areaPlugin?.destroy();
+  }
+  updateSelection() {
+    const currentSelectedNodes = this.getSelectedNodes();
+    const currentSelectedNodeIds = new Set(currentSelectedNodes.map((node2) => node2.id.toString()));
+    const addedNodes = [];
+    const removedNodes = [];
+    this.selectedNodes.forEach((nodeId) => {
+      if (!currentSelectedNodeIds.has(nodeId)) {
+        this.selectedNodes.delete(nodeId);
+        removedNodes.push(nodeId);
+      }
+    });
+    currentSelectedNodeIds.forEach((nodeId) => {
+      if (!this.selectedNodes.has(nodeId)) {
+        this.selectedNodes.add(nodeId);
+        addedNodes.push(nodeId);
+      }
+    });
+    if (addedNodes.length > 0 || removedNodes.length > 0) {
+      if (removedNodes.length > 0) {
+        console.log(`Selection changed, removed nodes: ${removedNodes.join(", ")}, current selection: ${currentSelectedNodes.map((x2) => x2.id).join(", ")}`);
+      }
+      if (addedNodes.length > 0) {
+        console.log(`Selection changed, added nodes: ${addedNodes.join(", ")}, current selection: ${currentSelectedNodes.map((x2) => x2.id).join(", ")}`);
+      }
+      if (this.dotnetHelper) {
+        this.dotnetHelper.invokeMethodAsync("OnSelectionChanged", Array.from(currentSelectedNodeIds));
+      }
+    }
   }
 };
 
