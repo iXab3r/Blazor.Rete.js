@@ -1,7 +1,6 @@
 ﻿import React = require("react");
 import {createEditor} from "./reteEditor";
 import {useRete} from "rete-react-plugin";
-import * as Utils from './BlazorReteJsInterop'
 
 export type ReteAppProps = {
     id: string;

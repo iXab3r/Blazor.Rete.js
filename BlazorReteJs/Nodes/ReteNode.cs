@@ -3,43 +3,17 @@ using Microsoft.JSInterop;
 
 namespace BlazorReteJs.Nodes;
 
-public class ReteConnection
-{
-    private readonly IJSObjectReference connectionRef;
-
-    public ReteConnection(IJSRuntime jsRuntime, IJSObjectReference connectionRef)
-    {
-        this.connectionRef = connectionRef;
-        Id = new JsProperty<string>(jsRuntime, connectionRef, "id");
-        Target = new JsProperty<string>(jsRuntime, connectionRef, "target");
-        SourceOutput = new JsProperty<string>(jsRuntime, connectionRef, "sourceOutput");
-        TargetInput = new JsProperty<string>(jsRuntime, connectionRef, "targetInput");
-    }
-    
-    public JsProperty<string> Id { get; }
-    
-    public JsProperty<string> Target { get; }
-    
-    public JsProperty<string> SourceOutput { get; }
-    
-    public JsProperty<string> TargetInput { get; }
-
-    public override string ToString()
-    {
-        return new { Id = Id.Value, Target = Target.Value, SourceOutput = SourceOutput.Value, TargetInput = TargetInput.Value }.ToString();
-    }
-}
-
 public class ReteNode
 {
     private readonly IJSObjectReference nodeRef;
 
-    public ReteNode(IJSRuntime jsRuntime, IJSObjectReference nodeRef)
+    public ReteNode(string nodeId, IJSRuntime jsRuntime, IJSObjectReference nodeRef)
     {
         this.nodeRef = nodeRef;
         IsActive = new JsProperty<bool>(jsRuntime, nodeRef, "isActive");
+        IsBusy = new JsProperty<bool>(jsRuntime, nodeRef, "isBusy");
         IsSelected = new JsProperty<bool>(jsRuntime, nodeRef, "selected");
-        Id = new JsProperty<string>(jsRuntime, nodeRef, "id");
+        Id = nodeId;
         Label = new JsProperty<string>(jsRuntime, nodeRef, "label");
     }
 
@@ -47,12 +21,25 @@ public class ReteNode
     
     public JsProperty<bool> IsActive { get; }
     
-    public JsProperty<string> Id { get; }
+    public JsProperty<bool> IsBusy { get; }
+    
+    public string Id { get; }
     
     public JsProperty<string> Label { get; }
 
+    public static async Task<ReteNode> FromJsNode(IJSRuntime jsRuntime, IJSObjectReference nodeRef)
+    {
+        var id = await nodeRef.GetObjectPropertyAsync<string>(jsRuntime, "id");
+        var result = new ReteNode(id, jsRuntime, nodeRef);
+        await result.IsSelected.GetValue();
+        await result.IsActive.GetValue();
+        await result.Label.GetValue();
+        await result.IsBusy.GetValue();
+        return result;
+    }
+
     public override string ToString()
     {
-        return new { Id = Id.Value, Label = Label.Value, IsSelected = IsSelected.Value, IsActive = IsActive.Value }.ToString();
+        return new { Id, Label = Label.Value, IsSelected = IsSelected.Value, IsActive = IsActive.Value }.ToString();
     }
 }

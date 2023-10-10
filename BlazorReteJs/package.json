@@ -10,6 +10,7 @@
     "rete-auto-arrange-plugin": "^2.0.0",
     "rete-connection-plugin": "^2.0.0",
     "rete-react-plugin": "^2.0.2",
+    "rete-readonly-plugin": "^2.0.0",
     "rete-render-utils": "^2.0.1",
     "save-dev": "^0.0.1-security",
     "sweetalert": "^2.1.2"

@@ -14,7 +14,7 @@ public partial class BlazorReteEditor
     private ReteEditorFacade reteEditorFacade;
 
     private readonly Dictionary<string, ReteNode> nodesById = new();
-    private readonly List<ReteConnection> connections = new();
+    private readonly Dictionary<string, ReteConnection> connectionsById = new();
     private readonly ISubject<Unit> whenLoaded = new ReplaySubject<Unit>(1);
 
     [Inject] protected IJSRuntime JsRuntime { get; private set; }
@@ -23,11 +23,9 @@ public partial class BlazorReteEditor
 
     public IObservable<Unit> WhenLoaded => whenLoaded;
 
-
-    protected override void OnInitialized()
-    {
-        base.OnInitialized();
-    }
+    public IEnumerable<ReteNode> Nodes => nodesById.Values;
+    
+    public IEnumerable<ReteConnection> Connections => connectionsById.Values;
 
     protected override async Task OnInitializedAsync()
     {
@@ -58,7 +56,7 @@ public partial class BlazorReteEditor
                 var set = new HashSet<string>(x);
                 foreach (var node in nodesById.Values)
                 {
-                    var isSelected = set.Contains(node.Id.Value);
+                    var isSelected = set.Contains(node.Id);
                     node.IsSelected.ReportValue(isSelected);
                 }
             });
@@ -66,40 +64,70 @@ public partial class BlazorReteEditor
     
     public ValueTask UpdateNode(ReteNode node)
     {
-        return reteEditorFacade.UpdateNode(node.Id.Value);
+        return reteEditorFacade.UpdateNode(node.Id);
+    }
+    
+    public ValueTask EnableReadonly()
+    {
+        return reteEditorFacade.EnableReadonly();
+    }
+    
+    public ValueTask DisableReadonly() 
+    {
+        return reteEditorFacade.DisableReadonly();
     }
 
-    public async Task<ReteConnection> AddConnection(ReteNode firstNode, ReteNode secondNode)
+    public async Task<bool> RemoveConnection(string connectionId)
     {
-        var firstNodeId = await firstNode.Id.GetValue();
-        var secondNodeId = await secondNode.Id.GetValue();
-        var jsConnection = await reteEditorFacade.AddConnection(firstNodeId, secondNodeId);
-        var csConnection = new ReteConnection(JsRuntime, jsConnection);
-        connections.Add(csConnection);
+        if (!connectionsById.Remove(connectionId))
+        {
+            return false;
+        }
+        var result = await reteEditorFacade.RemoveConnection(connectionId);
+        return result;
+    }
+
+    public async Task<ReteConnection> AddConnection(ReteNode source, ReteNode target, string connectionId = default)
+    {
+        var jsConnection = await reteEditorFacade.AddConnection(source.Id, target.Id, connectionId);
+        var csConnection = await ReteConnection.FromJsConnection(JsRuntime, jsConnection);
+        connectionsById.Add(csConnection.Id, csConnection);
         return csConnection;
     }
 
-    public async Task<ReteNode> AddNode(string label)
+    public async Task<ReteNode> AddNode(string label, string nodeId = default)
     {
-        var jsNode = await reteEditorFacade.AddNode(label);
-        var csNode = new ReteNode(JsRuntime, jsNode);
-        var nodeId = await csNode.Id.GetValue();
-        nodesById.Add(nodeId, csNode);
+        var jsNode = await reteEditorFacade.AddNode(label, nodeId);
+        var csNode = await ReteNode.FromJsNode(JsRuntime, jsNode);
+        if (!string.IsNullOrEmpty(nodeId) && !string.Equals(csNode.Id, nodeId))
+        {
+            throw new ArgumentException($"Failed to create node with Id {nodeId}, result: {csNode}", nameof(nodeId));
+        }
+        nodesById.Add(csNode.Id, csNode);
         return csNode;
     }
 
     public async Task Clear()
     {
         await reteEditorFacade.Clear();
-        connections.Clear();
+        connectionsById.Clear();
         nodesById.Clear();
     }
-
-    public async Task RemoveNode(ReteNode node)
+    
+    public async Task ArrangeNodes(bool animate = false)
     {
-        var nodeId = await node.Id.GetValue();
-        await reteEditorFacade.RemoveNode(nodeId);
-        nodesById.Remove(nodeId);
+        await reteEditorFacade.ArrangeNodes(animate);
+    }
+    
+    public async Task ZoomAtNodes()
+    {
+        await reteEditorFacade.ZoomAtNodes();
+    }
+
+    public async Task<bool> RemoveNode(ReteNode node)
+    {
+        nodesById.Remove(node.Id);
+        return await reteEditorFacade.RemoveNode(node.Id);
     }
 
     public async Task ToggleActive()
@@ -108,8 +136,7 @@ public partial class BlazorReteEditor
         {
             var isActive = await reteNode.IsActive.GetValue();
             await reteNode.IsActive.SetValue(!isActive);
-            var nodeId = await reteNode.Id.GetValue();
-            await reteEditorFacade.UpdateNode(nodeId);
+            await reteEditorFacade.UpdateNode(reteNode.Id);
         }
     }
 }

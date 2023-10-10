@@ -24,6 +24,7 @@
                                                                         var secondNode = await editor.AddNode($"CS-{Guid.NewGuid().ToString()}"); await editor.AddConnection(firstNode, secondNode); })">Add Connection</button>
             <button class="btn btn-primary" @onclick="@(async () => await editor.ToggleActive())">Toggle IsActive</button>
             <button class="btn btn-primary" @onclick="@(async () => await editor.Clear())">Clear</button>
+            <button class="btn btn-primary" @onclick="@(async () => await editor.RemoveNode(editor.Nodes.Single(x => x.IsSelected)))">Remove selected</button>
 
         </div>
     </div>

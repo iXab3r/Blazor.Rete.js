@@ -19,24 +19,39 @@ public sealed class ReteEditorFacade
 
     public IObservable<string[]> WhenSelectionChanged => whenSelectionChanged;
 
-    public ValueTask<IJSObjectReference> AddNode(string label) 
+    public ValueTask<IJSObjectReference> AddNode(string label, string nodeId = default) 
     {
-        return editorRef.InvokeAsync<IJSObjectReference>("addNode", label);
+        return editorRef.InvokeAsync<IJSObjectReference>("addNode", label, nodeId);
     }
     
-    public ValueTask<IJSObjectReference> AddConnection(string firstNodeId, string secondNodeId) 
+    public ValueTask<IJSObjectReference> AddConnection(string firstNodeId, string secondNodeId, string connectionId = default) 
     {
-        return editorRef.InvokeAsync<IJSObjectReference>("addConnection", firstNodeId, secondNodeId);
+        return editorRef.InvokeAsync<IJSObjectReference>("addConnection", firstNodeId, secondNodeId, connectionId);
+    } 
+    
+    public ValueTask<bool> RemoveConnection(string connectionId) 
+    {
+        return editorRef.InvokeAsync<bool>("removeConnection", connectionId);
     }
     
-    public ValueTask RemoveNode(string nodeId) 
+    public ValueTask<bool> RemoveNode(string nodeId) 
     {
-        return editorRef.InvokeVoidAsync("removeNode", nodeId);
+        return editorRef.InvokeAsync<bool>("removeNode", nodeId);
     }
     
     public ValueTask UpdateNode(string nodeId) 
     {
         return editorRef.InvokeVoidAsync("updateNode", nodeId);
+    }
+    
+    public ValueTask EnableReadonly() 
+    {
+        return editorRef.InvokeVoidAsync("enableReadonly");
+    }
+    
+    public ValueTask DisableReadonly() 
+    {
+        return editorRef.InvokeVoidAsync("disableReadonly");
     }
 
     public ValueTask Initialize()

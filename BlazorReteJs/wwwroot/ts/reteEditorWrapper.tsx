@@ -2,13 +2,14 @@
 import {ClassicPreset, NodeEditor} from "rete";
 import {AreaExtensions, AreaPlugin} from "rete-area-plugin";
 import {Node, Schemes} from './reteEditor.shared'
-import {ReteStyledNode} from './ReteStyledNode'
 
 import {AutoArrangePlugin, Presets as ArrangePresets, ArrangeAppliers} from "rete-auto-arrange-plugin";
 import {ConnectionPlugin, Presets as ConnectionPresets} from "rete-connection-plugin";
 import {Presets, ReactPlugin} from "rete-react-plugin";
 import {AreaExtra} from "./reteEditor";
 import {addCustomBackground} from "./custom-background";
+import {ReteCustomNode} from "./rete-custom-node";
+import { ReadonlyPlugin } from "rete-readonly-plugin";
 
 interface DotNetHelper {
     invokeMethodAsync<T>(methodName: string, ...args: any[]): Promise<T>;
@@ -20,6 +21,7 @@ export class ReteEditorWrapper {
     private renderPlugin: ReactPlugin<Schemes, AreaExtra>;
     private connectionPlugin: ConnectionPlugin<Schemes, AreaExtra>;
     private arrangePlugin: AutoArrangePlugin<Schemes>;
+    private readonlyPlugin: ReadonlyPlugin<Schemes>;
     private socket = new ClassicPreset.Socket("socket");
     private dotnetHelper: any;
     private readonly selectedNodes = new Set<string>();
@@ -27,19 +29,53 @@ export class ReteEditorWrapper {
     constructor() {
     }
     
-    public async addConnection(firstNodeId: string, secondNodeId: string){
-        const firstNode = this.editor.getNode(firstNodeId);
-        const secondNode = this.editor.getNode(secondNodeId);
-        const connection = new ClassicPreset.Connection(firstNode, "O", secondNode, "I");
+    public async addConnection(sourceNodeId: string, targetNodeId: string, connectionId: string){
+        console.info(`Adding new connection: ${sourceNodeId} => ${targetNodeId}`)
+        const sourceNode = this.editor.getNode(sourceNodeId);
+        const targetNode = this.editor.getNode(targetNodeId);
+        const connection = new ClassicPreset.Connection(sourceNode, "O", targetNode, "I");
+        if (connectionId){
+            connection.id = connectionId;
+        }
         if (await this.editor.addConnection(connection)) {
             return connection;
         } else {
-            throw `Failed to add connection ${firstNodeId} => ${secondNodeId}`;
+            throw `Failed to add connection ${sourceNodeId} => ${targetNodeId}`;
+        }
+    }
+    
+    public enableReadonly(){
+        console.info(`Enabling readonly-mode, enabled: ${this.readonlyPlugin.enabled}`);
+        this.readonlyPlugin.enable();
+    }
+
+    public disableReadonly(){
+        console.info(`Disabling readonly-mode, enabled: ${this.readonlyPlugin.enabled}`);
+        this.readonlyPlugin.disable();
+    }
+
+    public async removeConnection(connectionId: string): Promise<boolean> {
+        console.info(`Removing connection by Id: ${connectionId}`)
+        const connection = this.editor.getConnection(connectionId);
+        if (!connection){
+            console.warn(`Failed to remove connection by Id ${connectionId} - not found`)
+            return false;
+        }
+        if (await this.editor.removeConnection(connectionId)) {
+            return true;
+        } else {
+            console.warn(`Failed to remove connection by Id ${connectionId}`)
+            return false;
         }
     }
 
-    public async addNode(label: string): Promise<Node> {
+    public async addNode(label: string, nodeId: string): Promise<Node> {
+        console.info(`Adding new node, label: ${label}, Id: ${nodeId}`)
+        
         const node = new Node(label);
+        if (nodeId){
+            node.id = nodeId;
+        }
         node.addOutput("O", new ClassicPreset.Output(this.socket, undefined, true));
         node.addInput("I", new ClassicPreset.Input(this.socket, undefined, true));
         if (await this.editor.addNode(node)) {
@@ -49,11 +85,23 @@ export class ReteEditorWrapper {
         }
     }
 
-    public async removeNode(nodeId: string): Promise<void> {
-        await this.editor.removeNode(nodeId);
+    public async removeNode(nodeId: string): Promise<boolean> {
+        console.info(`Removing node by Id: ${nodeId}`)
+        const connections = this.editor.getConnections().filter(x => x.source === nodeId || x.target === nodeId);
+        for (let connection of connections){
+            await this.removeConnection(connection.id);
+        }
+
+        if (await this.editor.removeNode(nodeId)) {
+            return true;
+        } else {
+            console.warn(`Failed to remove node by Id: ${nodeId}`);
+            return false;
+        }
     }
 
     public async clear(): Promise<void> {
+        console.info(`Clearing all nodes and connections`)
         await this.editor.clear();
     }
 
@@ -65,7 +113,6 @@ export class ReteEditorWrapper {
     }
 
     public updateNode(id: string){
-        console.info(`Updating node: ${id}`);
         this.areaPlugin.update('node', id);
     }
 
@@ -129,6 +176,7 @@ export class ReteEditorWrapper {
         this.areaPlugin = new AreaPlugin<Schemes, AreaExtra>(container);
         this.connectionPlugin = new ConnectionPlugin<Schemes, AreaExtra>();
         this.renderPlugin = new ReactPlugin<Schemes, AreaExtra>({createRoot});
+        this.readonlyPlugin = new ReadonlyPlugin<Schemes>();
 
         const nodeSelector = AreaExtensions.selectableNodes(this.areaPlugin, AreaExtensions.selector(), {
             accumulating: AreaExtensions.accumulateOnCtrl()
@@ -136,6 +184,7 @@ export class ReteEditorWrapper {
 
         this.connectionPlugin.addPreset(ConnectionPresets.classic.setup());
         this.editor.use(this.areaPlugin);
+        this.editor.use(this.readonlyPlugin.root);
         this.areaPlugin.use(this.connectionPlugin);
         this.areaPlugin.use(this.renderPlugin);
 
@@ -147,8 +196,8 @@ export class ReteEditorWrapper {
 
         this.renderPlugin.addPreset(Presets.classic.setup({
             customize: {
-                node() {
-                    return ReteStyledNode
+                node(data) {
+                    return ReteCustomNode
                 },
             }
         }))
@@ -157,7 +206,6 @@ export class ReteEditorWrapper {
             if (context.type === 'nodecreated' ||
                 context.type === 'noderemoved' ||
                 context.type === 'cleared') {
-                console.info(`Context: ${context.type}, data: ${JSON.stringify(context)}`);
                 this.updateSelection();
             }
             return context
@@ -166,7 +214,6 @@ export class ReteEditorWrapper {
         this.areaPlugin.addPipe(context => {
             if (context.type === 'nodepicked' || 
                 context.type === 'render') {
-                console.info(`Context: ${context.type}`)
                 this.updateSelection();
             }
             return context
