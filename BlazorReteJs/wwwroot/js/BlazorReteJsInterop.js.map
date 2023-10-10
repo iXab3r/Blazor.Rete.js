@@ -1,7 +1,0 @@
-{
-  "version": 3,
-  "sources": ["../ts/BlazorReteJsInterop.tsx"],
-  "sourcesContent": ["\uFEFFconst BlazorReteJsInterop = {\r\n    setObjectProperty: function (obj, propName, value) {\r\n        obj[propName] = value;\r\n    },\r\n\r\n    getObjectProperty: function (obj, propName, defaultValue) {\r\n        return obj[propName] ?? defaultValue;\r\n    }\r\n};\r\n\r\n// Attach the namespace object to the window for access\r\n(window as any).BlazorReteJsInterop = BlazorReteJsInterop;\r\n"],
-  "mappings": ";AAAC,IAAM,sBAAsB;AAAA,EACzB,mBAAmB,SAAU,KAAK,UAAU,OAAO;AAC/C,QAAI,QAAQ,IAAI;AAAA,EACpB;AAAA,EAEA,mBAAmB,SAAU,KAAK,UAAU,cAAc;AACtD,WAAO,IAAI,QAAQ,KAAK;AAAA,EAC5B;AACJ;AAGC,OAAe,sBAAsB;",
-  "names": []
-}

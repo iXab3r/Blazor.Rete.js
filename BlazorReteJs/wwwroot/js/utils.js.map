@@ -1,7 +1,0 @@
-{
-  "version": 3,
-  "sources": ["../ts/utils.tsx"],
-  "sourcesContent": ["\uFEFFexport function setProperty(obj: any, propName: string, value: any): void {\r\n    obj[propName] = value;\r\n}\r\n\r\nexport function getProperty(obj: any, propName: string): any {\r\n    return obj[propName];\r\n}\r\n"],
-  "mappings": ";AAAQ,SAAS,YAAY,KAAU,UAAkB,OAAkB;AACvE,MAAI,QAAQ,IAAI;AACpB;AAEO,SAAS,YAAY,KAAU,UAAuB;AACzD,SAAO,IAAI,QAAQ;AACvB;",
-  "names": []
-}

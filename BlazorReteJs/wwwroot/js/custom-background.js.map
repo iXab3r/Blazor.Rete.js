@@ -1,7 +1,0 @@
-{
-  "version": 3,
-  "sources": ["../ts/custom-background.ts"],
-  "sourcesContent": ["import { BaseSchemes } from 'rete';\r\nimport { AreaPlugin } from 'rete-area-plugin';\r\n\r\nexport function addCustomBackground<S extends BaseSchemes, K>(\r\n    area: AreaPlugin<S, K>\r\n) {\r\n    const background = document.createElement('div');\r\n\r\n    background.classList.add('background');\r\n    background.classList.add('fill-area');\r\n\r\n    area.area.content.add(background);\r\n}"],
-  "mappings": ";AAGO,SAAS,oBACZ,MACF;AACE,QAAM,aAAa,SAAS,cAAc,KAAK;AAE/C,aAAW,UAAU,IAAI,YAAY;AACrC,aAAW,UAAU,IAAI,WAAW;AAEpC,OAAK,KAAK,QAAQ,IAAI,UAAU;AACpC;",
-  "names": []
-}
