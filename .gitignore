@@ -257,3 +257,4 @@ Sources/MaterialDesignInXamlToolkit
 *.backup
 *.g.evb
 *.g.*
+**/js/
