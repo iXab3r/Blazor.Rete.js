@@ -1,4 +1,5 @@
 ﻿using System.Reactive.Subjects;
+using BlazorReteJs.Scaffolding;
 using Microsoft.JSInterop;
 
 namespace BlazorReteJs;
@@ -8,6 +9,7 @@ public sealed class ReteEditorFacade
     private readonly IJSObjectReference editorRef;
     private readonly DotNetObjectReference<ReteEditorFacade> dotNetObjectReference;
     private readonly ISubject<string[]> whenSelectionChanged = new Subject<string[]>();
+    private readonly JsProperty<bool> backgroundEnabled;
 
     public ReteEditorFacade(IJSObjectReference jsModule)
     {
@@ -18,6 +20,16 @@ public sealed class ReteEditorFacade
     public IJSObjectReference EditorRef => editorRef;
 
     public IObservable<string[]> WhenSelectionChanged => whenSelectionChanged;
+    
+    public async Task<bool> GetBackgroundEnabled()
+    {
+        return await editorRef.InvokeAsync<bool>("getBackgroundEnabled");
+    }
+    
+    public async Task SetBackgroundEnabled(bool value)
+    {
+        await editorRef.InvokeVoidAsync(value ? "enableBackground" : "disableBackground", value);
+    }
 
     public ValueTask<IJSObjectReference> AddNode(string label, string nodeId = default) 
     {

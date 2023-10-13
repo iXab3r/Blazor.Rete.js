@@ -38,6 +38,16 @@ public partial class BlazorReteEditor
     {
         await base.OnAfterRenderAsync(firstRender);
     }
+    
+    public async Task<bool> GetBackgroundEnabled()
+    {
+        return await reteEditorFacade.GetBackgroundEnabled();
+    }
+    
+    public async Task SetBackgroundEnabled(bool value)
+    {
+        await reteEditorFacade.SetBackgroundEnabled(value);
+    }
 
     private async Task HandleLoaded()
     {

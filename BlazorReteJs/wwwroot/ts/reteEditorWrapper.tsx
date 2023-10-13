@@ -7,7 +7,7 @@ import {AutoArrangePlugin, Presets as ArrangePresets, ArrangeAppliers} from "ret
 import {ConnectionPlugin, Presets as ConnectionPresets} from "rete-connection-plugin";
 import {Presets, ReactPlugin} from "rete-react-plugin";
 import {AreaExtra} from "./reteEditor";
-import {addCustomBackground} from "./custom-background";
+import {prepareBackgroundElement} from "./custom-background";
 import {ReteCustomNode} from "./rete-custom-node";
 import { ReadonlyPlugin } from "rete-readonly-plugin";
 
@@ -25,6 +25,8 @@ export class ReteEditorWrapper {
     private socket = new ClassicPreset.Socket("socket");
     private dotnetHelper: any;
     private readonly selectedNodes = new Set<string>();
+    private readonly background: HTMLDivElement = prepareBackgroundElement();
+    private _backgroundEnabled: boolean = false;
     
     constructor() {
     }
@@ -52,6 +54,37 @@ export class ReteEditorWrapper {
     public disableReadonly(){
         console.info(`Disabling readonly-mode, enabled: ${this.readonlyPlugin.enabled}`);
         this.readonlyPlugin.disable();
+    }
+
+    public enableBackground(){
+        this.backgroundEnabled = true;
+    }
+
+    public disableBackground(){
+        this.backgroundEnabled = false;
+    }
+    
+    public getBackgroundEnabled(){
+        return this._backgroundEnabled;
+    }
+    
+    get backgroundEnabled(): boolean {
+        return this._backgroundEnabled;
+    }
+
+    set backgroundEnabled(value: boolean) {
+        if (value === this._backgroundEnabled) {
+            return;
+        }
+        
+        if (value) {
+            console.info(`Enabling background`);
+            this.areaPlugin.area.content.add(this.background);
+        } else {
+            console.info(`Disabling background`);
+            this.areaPlugin.area.content.remove(this.background);
+        }
+        this._backgroundEnabled = value;
     }
 
     public async removeConnection(connectionId: string): Promise<boolean> {
@@ -191,8 +224,6 @@ export class ReteEditorWrapper {
         this.arrangePlugin = new AutoArrangePlugin<Schemes>();
         this.arrangePlugin.addPreset(ArrangePresets.classic.setup());
         this.areaPlugin.use(this.arrangePlugin);
-
-        addCustomBackground(this.areaPlugin)
 
         this.renderPlugin.addPreset(Presets.classic.setup({
             customize: {
