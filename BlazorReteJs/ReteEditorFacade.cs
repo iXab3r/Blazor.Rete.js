@@ -1,35 +1,40 @@
 ﻿using System.Reactive.Subjects;
+using BlazorReteJs.Api;
 using BlazorReteJs.Scaffolding;
 using Microsoft.JSInterop;
 
 namespace BlazorReteJs;
 
-public sealed class ReteEditorFacade
+internal sealed class ReteEditorFacade
 {
     private readonly IJSObjectReference editorRef;
     private readonly DotNetObjectReference<ReteEditorFacade> dotNetObjectReference;
     private readonly ISubject<string[]> whenSelectionChanged = new Subject<string[]>();
-    private readonly JsProperty<bool> backgroundEnabled;
 
     public ReteEditorFacade(IJSObjectReference jsModule)
     {
         this.dotNetObjectReference = DotNetObjectReference.Create(this);
         this.editorRef = jsModule ?? throw new ArgumentNullException(nameof(jsModule));
+        BackgroundEnabled = new JsProperty<bool>(editorRef, nameof(BackgroundEnabled));
+        ArrangeDirection = new JsProperty<ReteArrangeDirection>(editorRef, nameof(ArrangeDirection));
+        ArrangeAlgorithm = new JsProperty<ReteArrangeAlgorithm>(editorRef, nameof(ArrangeAlgorithm));
+        Readonly = new JsProperty<bool>(editorRef, nameof(Readonly));
+        AutoArrange = new JsProperty<bool>(editorRef, nameof(AutoArrange));
     }
 
     public IJSObjectReference EditorRef => editorRef;
 
     public IObservable<string[]> WhenSelectionChanged => whenSelectionChanged;
     
-    public async Task<bool> GetBackgroundEnabled()
-    {
-        return await editorRef.InvokeAsync<bool>("getBackgroundEnabled");
-    }
+    public JsProperty<bool> BackgroundEnabled { get; }
     
-    public async Task SetBackgroundEnabled(bool value)
-    {
-        await editorRef.InvokeVoidAsync(value ? "enableBackground" : "disableBackground", value);
-    }
+    public JsProperty<ReteArrangeDirection> ArrangeDirection { get; }
+    
+    public JsProperty<ReteArrangeAlgorithm> ArrangeAlgorithm { get; }
+    
+    public JsProperty<bool> Readonly { get; }
+    
+    public JsProperty<bool> AutoArrange { get; }
 
     public ValueTask<IJSObjectReference> AddNode(string label, string nodeId = default) 
     {
@@ -56,14 +61,14 @@ public sealed class ReteEditorFacade
         return editorRef.InvokeVoidAsync("updateNode", nodeId);
     }
     
-    public ValueTask EnableReadonly() 
+    public ValueTask UpdateConnection(string connectionId) 
     {
-        return editorRef.InvokeVoidAsync("enableReadonly");
+        return editorRef.InvokeVoidAsync("updateConnection", connectionId);
     }
     
-    public ValueTask DisableReadonly() 
+    public ValueTask UpdateControl(string controlId) 
     {
-        return editorRef.InvokeVoidAsync("disableReadonly");
+        return editorRef.InvokeVoidAsync("updateControl", controlId);
     }
 
     public ValueTask Initialize()

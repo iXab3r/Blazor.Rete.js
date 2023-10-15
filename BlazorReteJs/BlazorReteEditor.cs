@@ -1,6 +1,7 @@
 ﻿using System.Reactive;
 using System.Reactive.Subjects;
-using BlazorReteJs.Nodes;
+using BlazorReteJs.Api;
+using BlazorReteJs.Scaffolding;
 using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 
@@ -12,7 +13,7 @@ public partial class BlazorReteEditor
     private IJSObjectReference reteModule;
     private IJSObjectReference utilsModule;
     private ReteEditorFacade reteEditorFacade;
-
+    
     private readonly Dictionary<string, ReteNode> nodesById = new();
     private readonly Dictionary<string, ReteConnection> connectionsById = new();
     private readonly ISubject<Unit> whenLoaded = new ReplaySubject<Unit>(1);
@@ -27,6 +28,16 @@ public partial class BlazorReteEditor
     
     public IEnumerable<ReteConnection> Connections => connectionsById.Values;
 
+    public JsProperty<ReteArrangeDirection> ArrangeDirection => reteEditorFacade.ArrangeDirection;
+    
+    public JsProperty<ReteArrangeAlgorithm> ArrangeAlgorithm => reteEditorFacade.ArrangeAlgorithm;
+    
+    public JsProperty<bool> BackgroundEnabled => reteEditorFacade.BackgroundEnabled;
+    
+    public JsProperty<bool> Readonly => reteEditorFacade.Readonly;
+
+    public JsProperty<bool> AutoArrange => reteEditorFacade.AutoArrange;
+    
     protected override async Task OnInitializedAsync()
     {
         await base.OnInitializedAsync();
@@ -37,16 +48,6 @@ public partial class BlazorReteEditor
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         await base.OnAfterRenderAsync(firstRender);
-    }
-    
-    public async Task<bool> GetBackgroundEnabled()
-    {
-        return await reteEditorFacade.GetBackgroundEnabled();
-    }
-    
-    public async Task SetBackgroundEnabled(bool value)
-    {
-        await reteEditorFacade.SetBackgroundEnabled(value);
     }
 
     private async Task HandleLoaded()
@@ -77,14 +78,9 @@ public partial class BlazorReteEditor
         return reteEditorFacade.UpdateNode(node.Id);
     }
     
-    public ValueTask EnableReadonly()
+    public ValueTask UpdateConnection(ReteConnection connection)
     {
-        return reteEditorFacade.EnableReadonly();
-    }
-    
-    public ValueTask DisableReadonly() 
-    {
-        return reteEditorFacade.DisableReadonly();
+        return reteEditorFacade.UpdateConnection(connection.Id);
     }
 
     public async Task<bool> RemoveConnection(string connectionId)

@@ -1,17 +1,14 @@
 import * as React from "react";
-import {ClassicScheme, Presets, RenderEmit} from "rete-react-plugin";
+import {ClassicScheme, Presets} from "rete-react-plugin";
 import styled, {css} from "styled-components";
 import {$nodewidth, $socketmargin, $socketsize} from "./vars";
-import {ReteCustomNodeProps, sortByIndex} from "./reteEditor.shared";
-import {Schemes} from "./reteEditor.shared";
+import {NodeExtraData, ReteCustomNodeProps, sortByIndex} from "./reteEditor.shared";
 
 const {RefSocket, RefControl} = Presets.classic;
 
-type NodeExtraData = { width?: number; height?: number };
-
 export const selectedShadow = '0px 2px 6px 2px #985700, 0 0 0px 5px #c9b144;'
 
-export const NodeStyles = styled.div<NodeExtraData & { isActive: boolean; selected: boolean; styles?: (props: any) => any }>`
+export const NodeStyles = styled.div<NodeExtraData & { styles?: (props: any) => any }>`
   border-radius: 10px;
   color: white;
   cursor: pointer;
@@ -36,6 +33,11 @@ export const NodeStyles = styled.div<NodeExtraData & { isActive: boolean; select
     text-align: center;
     overflow: hidden;
     text-overflow: ellipsis;
+    text-shadow:
+              -1px -1px 0 #000,
+              1px -1px 0 #000,
+            -1px 1px 0 #000,
+            1px 1px 0 #000; /* This gives a black outline around the text */
   }
 
   .glossy {

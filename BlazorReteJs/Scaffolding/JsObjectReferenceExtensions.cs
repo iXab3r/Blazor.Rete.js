@@ -4,12 +4,12 @@ namespace BlazorReteJs.Scaffolding;
 
 public static class JsObjectReferenceExtensions
 {
-    public static async Task<T> GetObjectPropertyAsync<T>(this IJSObjectReference objRef, IJSRuntime jsRuntime, string propName, T defaultValue = default)
+    public static async Task<T> GetObjectFieldAsync<T>(this IJSObjectReference objRef, IJSRuntime jsRuntime, string propName, T defaultValue = default)
     {
         if (objRef is null)
             throw new ArgumentNullException(nameof(objRef));
 
-        var result = await jsRuntime.InvokeAsync<T>("BlazorReteJsInterop.getObjectProperty", objRef, propName, defaultValue);
+        var result = await jsRuntime.InvokeAsync<T>("BlazorReteJsInterop.getObjectField", objRef, propName, defaultValue);
         return result;
     }
 
@@ -18,6 +18,6 @@ public static class JsObjectReferenceExtensions
         if (objRef is null)
             throw new ArgumentNullException(nameof(objRef));
 
-        await jsRuntime.InvokeVoidAsync("BlazorReteJsInterop.setObjectProperty", objRef, propName, value);
+        await jsRuntime.InvokeVoidAsync("BlazorReteJsInterop.setObjectField", objRef, propName, value);
     }
 }

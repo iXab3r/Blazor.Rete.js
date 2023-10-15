@@ -9,8 +9,6 @@
 }
 
 .background {
-    /* background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAIAAAACABAMAAAAxEHz4AAAAG1BMVEUVFRUWFhYkJCQlJSUzMzMmJiY0NDQxMTEyMjIQl+acAAAAXklEQVR4AWKAA0HyAAOTkrIxCDiHQkAqifSgMWDUgFEDRg1g7wCCFhcgcEsjB4wGIqCdOhYAAAAAGORvPYw9CXQ2AQCADwAAgA8AAIAPAACADwAAgA8AAIAPfgAAAASSCCi35k/7bwAAAABJRU5ErkJggg==); */
-
     background-color: #262626;
     opacity: 1;
     background-image:

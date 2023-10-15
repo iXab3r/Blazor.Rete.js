@@ -1,11 +1,17 @@
 ﻿import {ClassicPreset, GetSchemes} from "rete";
 import {ClassicScheme, Presets, RenderEmit} from "rete-react-plugin";
 
-type NodeExtraData = { 
+export type NodeExtraData = { 
     width?: number; 
     height?: number;
     isBusy: boolean;
     isActive: boolean;
+    selected: boolean;
+};
+
+export type ConnectionExtraData = { 
+    isActive?: boolean, 
+    isLoop?: boolean 
 };
 
 export class Node extends ClassicPreset.Node {
@@ -24,6 +30,13 @@ export type ReteCustomNodeProps<S extends ClassicScheme> = {
     styles?: () => any;
     emit: RenderEmit<S>;
 };
+
+export type ReteCustomConnectionProps<S extends ClassicScheme> = {
+    data: S["Connection"] & ConnectionExtraData;
+    styles?: () => any;
+    emit: RenderEmit<S>;
+};
+
 
 export type NodeComponent<Scheme extends ClassicScheme> = (
     props: ReteCustomNodeProps<Scheme>

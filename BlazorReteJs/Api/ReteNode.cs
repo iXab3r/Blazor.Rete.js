@@ -1,7 +1,7 @@
 ﻿using BlazorReteJs.Scaffolding;
 using Microsoft.JSInterop;
 
-namespace BlazorReteJs.Nodes;
+namespace BlazorReteJs.Api;
 
 public class ReteNode
 {
@@ -10,26 +10,26 @@ public class ReteNode
     public ReteNode(string nodeId, IJSRuntime jsRuntime, IJSObjectReference nodeRef)
     {
         this.nodeRef = nodeRef;
-        IsActive = new JsProperty<bool>(jsRuntime, nodeRef, "isActive");
-        IsBusy = new JsProperty<bool>(jsRuntime, nodeRef, "isBusy");
-        IsSelected = new JsProperty<bool>(jsRuntime, nodeRef, "selected");
+        IsActive = new JsField<bool>(jsRuntime, nodeRef, "isActive");
+        IsBusy = new JsField<bool>(jsRuntime, nodeRef, "isBusy");
+        IsSelected = new JsField<bool>(jsRuntime, nodeRef, "selected");
         Id = nodeId;
-        Label = new JsProperty<string>(jsRuntime, nodeRef, "label");
+        Label = new JsField<string>(jsRuntime, nodeRef, "label");
     }
 
-    public JsProperty<bool> IsSelected { get; }
+    public JsField<bool> IsSelected { get; }
     
-    public JsProperty<bool> IsActive { get; }
+    public JsField<bool> IsActive { get; }
     
-    public JsProperty<bool> IsBusy { get; }
+    public JsField<bool> IsBusy { get; }
     
     public string Id { get; }
     
-    public JsProperty<string> Label { get; }
+    public JsField<string> Label { get; }
 
     public static async Task<ReteNode> FromJsNode(IJSRuntime jsRuntime, IJSObjectReference nodeRef)
     {
-        var id = await nodeRef.GetObjectPropertyAsync<string>(jsRuntime, "id");
+        var id = await nodeRef.GetObjectFieldAsync<string>(jsRuntime, "id");
         var result = new ReteNode(id, jsRuntime, nodeRef);
         await result.IsSelected.GetValue();
         await result.IsActive.GetValue();

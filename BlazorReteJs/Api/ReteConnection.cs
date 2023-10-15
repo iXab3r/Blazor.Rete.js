@@ -1,7 +1,7 @@
 using BlazorReteJs.Scaffolding;
 using Microsoft.JSInterop;
 
-namespace BlazorReteJs.Nodes;
+namespace BlazorReteJs.Api;
 
 public class ReteConnection
 {
@@ -11,30 +11,34 @@ public class ReteConnection
     {
         this.connectionRef = connectionRef;
         Id = connectionId;
-        Source = new JsProperty<string>(jsRuntime, connectionRef, "source");
-        Target = new JsProperty<string>(jsRuntime, connectionRef, "target");
-        SourceOutput = new JsProperty<string>(jsRuntime, connectionRef, "sourceOutput");
-        TargetInput = new JsProperty<string>(jsRuntime, connectionRef, "targetInput");
+        Source = new JsField<string>(jsRuntime, connectionRef, "source");
+        Target = new JsField<string>(jsRuntime, connectionRef, "target");
+        SourceOutput = new JsField<string>(jsRuntime, connectionRef, "sourceOutput");
+        TargetInput = new JsField<string>(jsRuntime, connectionRef, "targetInput");
+        IsActive = new JsField<bool>(jsRuntime, connectionRef, "isActive");
     }
     
     public string Id { get; }
     
-    public JsProperty<string> Target { get; }
+    public JsField<string> Target { get; }
     
-    public JsProperty<string> Source { get; }
+    public JsField<string> Source { get; }
     
-    public JsProperty<string> SourceOutput { get; }
+    public JsField<string> SourceOutput { get; }
     
-    public JsProperty<string> TargetInput { get; }
+    public JsField<string> TargetInput { get; }
+    
+    public JsField<bool> IsActive { get; }
     
     public static async Task<ReteConnection> FromJsConnection(IJSRuntime jsRuntime, IJSObjectReference connectionRef)
     {
-        var id = await connectionRef.GetObjectPropertyAsync<string>(jsRuntime, "id");
+        var id = await connectionRef.GetObjectFieldAsync<string>(jsRuntime, "id");
         var result = new ReteConnection(id, jsRuntime, connectionRef);
         await result.Source.GetValue();
         await result.Target.GetValue();
         await result.TargetInput.GetValue();
         await result.SourceOutput.GetValue();
+        await result.IsActive.GetValue();
         return result;
     }
 

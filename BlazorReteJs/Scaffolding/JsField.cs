@@ -2,37 +2,35 @@ using Microsoft.JSInterop;
 
 namespace BlazorReteJs.Scaffolding;
 
-public sealed class JsProperty<T>
+public sealed class JsField<T>
 {
-    private readonly string getterMethodName;
-    private readonly string setterMethodName;
-    
-    public JsProperty(IJSObjectReference objectRef, string propertyName)
+    public JsField(IJSRuntime jsRuntime, IJSObjectReference objectRef, string propertyName)
     {
+        JsRuntime = jsRuntime;
         ObjectRef = objectRef;
         PropertyName = propertyName;
-        getterMethodName = $"get{propertyName}";
-        setterMethodName = $"set{propertyName}";
     }
+
+    public IJSRuntime JsRuntime { get; }
     
     public IJSObjectReference ObjectRef { get; }
-    
+
     public string PropertyName { get; }
     
     public T Value { get; private set; }
     
-    public static implicit operator T(JsProperty<T> source) => source.Value;
-    
+    public static implicit operator T(JsField<T> source) => source.Value;
+
     public async Task<T> GetValue()
     {
-        var value = await ObjectRef.InvokeAsync<T>(getterMethodName);
+        var value = await ObjectRef.GetObjectFieldAsync<T>(JsRuntime, PropertyName);
         ReportValue(value);
         return value;
     }
 
     public async Task SetValue(T value)
     {
-        await ObjectRef.InvokeVoidAsync(setterMethodName, value);
+        await ObjectRef.SetObjectPropertyAsync(JsRuntime, PropertyName, value);
         ReportValue(value);
     }
     

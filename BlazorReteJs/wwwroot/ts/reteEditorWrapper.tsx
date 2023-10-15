@@ -3,13 +3,18 @@ import {ClassicPreset, NodeEditor} from "rete";
 import {AreaExtensions, AreaPlugin} from "rete-area-plugin";
 import {Node, Schemes} from './reteEditor.shared'
 
-import {AutoArrangePlugin, Presets as ArrangePresets, ArrangeAppliers} from "rete-auto-arrange-plugin";
+import {ArrangeAppliers, AutoArrangePlugin, Presets as ArrangePresets} from "rete-auto-arrange-plugin";
 import {ConnectionPlugin, Presets as ConnectionPresets} from "rete-connection-plugin";
 import {Presets, ReactPlugin} from "rete-react-plugin";
 import {AreaExtra} from "./reteEditor";
 import {prepareBackgroundElement} from "./custom-background";
 import {ReteCustomNode} from "./rete-custom-node";
-import { ReadonlyPlugin } from "rete-readonly-plugin";
+import {ReadonlyPlugin} from "rete-readonly-plugin";
+import {SizeWatcher} from "./sizeWatcher";
+
+import {Subject, Subscription } from 'rxjs';
+import {throttleTime, switchMap, debounceTime, map} from 'rxjs/operators';
+import {ReteCustomConnection} from "./rete-custom-connection";
 
 interface DotNetHelper {
     invokeMethodAsync<T>(methodName: string, ...args: any[]): Promise<T>;
@@ -24,59 +29,75 @@ export class ReteEditorWrapper {
     private readonlyPlugin: ReadonlyPlugin<Schemes>;
     private socket = new ClassicPreset.Socket("socket");
     private dotnetHelper: any;
+    private sizeWatcher: SizeWatcher;
     private readonly selectedNodes = new Set<string>();
     private readonly background: HTMLDivElement = prepareBackgroundElement();
+    private readonly arrangeRequests = new Subject<string>();
+    private readonly anchors: Subscription = new Subscription();
+
     private _backgroundEnabled: boolean = false;
-    
+    private _arrangeDirection: string = undefined;
+    private _arrangeAlgorithm: string = undefined;
+    private _readonly: boolean = false;
+    private _autoArrange: boolean = false;
+
     constructor() {
     }
-    
-    public async addConnection(sourceNodeId: string, targetNodeId: string, connectionId: string){
-        console.info(`Adding new connection: ${sourceNodeId} => ${targetNodeId}`)
-        const sourceNode = this.editor.getNode(sourceNodeId);
-        const targetNode = this.editor.getNode(targetNodeId);
-        const connection = new ClassicPreset.Connection(sourceNode, "O", targetNode, "I");
-        if (connectionId){
-            connection.id = connectionId;
+
+    public getAutoArrange(): boolean {
+        return this._autoArrange;
+    }
+
+    public setAutoArrange(value: boolean) {
+        if (value === this._autoArrange) {
+            return;
         }
-        if (await this.editor.addConnection(connection)) {
-            return connection;
-        } else {
-            throw `Failed to add connection ${sourceNodeId} => ${targetNodeId}`;
+
+        console.info(`Setting AutoArrange: ${this._autoArrange} => ${value}`);
+        this._autoArrange = value;
+
+        if (this._autoArrange){
+            this.arrangeRequests.next(`Enabled auto-arrange`);
         }
     }
-    
-    public enableReadonly(){
-        console.info(`Enabling readonly-mode, enabled: ${this.readonlyPlugin.enabled}`);
-        this.readonlyPlugin.enable();
+
+    public getArrangeDirection(): string {
+        return this._arrangeDirection;
     }
 
-    public disableReadonly(){
-        console.info(`Disabling readonly-mode, enabled: ${this.readonlyPlugin.enabled}`);
-        this.readonlyPlugin.disable();
+    public setArrangeDirection(value: string) {
+        if (value === this._arrangeDirection) {
+            return;
+        }
+
+        console.info(`Setting arrange direction: ${this._arrangeDirection} => ${value}`);
+        this._arrangeDirection = value;
+        if (this._autoArrange){
+            this.arrangeRequests.next(`Changed arrange direction to ${value}`);
+        }
     }
 
-    public enableBackground(){
-        this.backgroundEnabled = true;
+    public getArrangeAlgorithm(): string {
+        return this._arrangeAlgorithm;
     }
 
-    public disableBackground(){
-        this.backgroundEnabled = false;
-    }
-    
-    public getBackgroundEnabled(){
-        return this._backgroundEnabled;
-    }
-    
-    get backgroundEnabled(): boolean {
-        return this._backgroundEnabled;
+    public setArrangeAlgorithm(value: string) {
+        if (value === this._arrangeAlgorithm) {
+            return;
+        }
+
+        console.info(`Setting arrange algorithm: ${this._arrangeAlgorithm} => ${value}`);
+        this._arrangeAlgorithm = value;
+        if (this._autoArrange){
+            this.arrangeRequests.next(`Changed arrange algorithm to ${value}`);
+        }
     }
 
-    set backgroundEnabled(value: boolean) {
+    public setBackgroundEnabled(value: boolean) {
         if (value === this._backgroundEnabled) {
             return;
         }
-        
+
         if (value) {
             console.info(`Enabling background`);
             this.areaPlugin.area.content.add(this.background);
@@ -87,14 +108,57 @@ export class ReteEditorWrapper {
         this._backgroundEnabled = value;
     }
 
+    public getBackgroundEnabled(): boolean {
+        return this._backgroundEnabled;
+    }
+
+    public getReadonly(): boolean {
+        return this._readonly;
+    }
+
+    public setReadonly(value: boolean) {
+        if (value === this._readonly) {
+            return;
+        }
+
+        console.info(`Setting Readonly-mode: ${this._arrangeDirection} => ${value}`);
+        this._readonly = value;
+        if (value === true) {
+            this.readonlyPlugin.enable();
+        } else {
+            this.readonlyPlugin.disable();
+        }
+    }
+
+    public async addConnection(sourceNodeId: string, targetNodeId: string, connectionId: string) {
+        console.info(`Adding new connection: ${sourceNodeId} => ${targetNodeId}`)
+        const sourceNode = this.editor.getNode(sourceNodeId);
+        const targetNode = this.editor.getNode(targetNodeId);
+        const connection = new ClassicPreset.Connection(sourceNode, "O", targetNode, "I");
+        if (connectionId) {
+            connection.id = connectionId;
+        }
+        if (await this.editor.addConnection(connection)) {
+            if (this._autoArrange){
+                this.arrangeRequests.next(`Added new connection ${sourceNodeId} => ${targetNodeId} (${connection.id})`);
+            }
+            return connection;
+        } else {
+            throw `Failed to add connection ${sourceNodeId} => ${targetNodeId}`;
+        }
+    }
+
     public async removeConnection(connectionId: string): Promise<boolean> {
         console.info(`Removing connection by Id: ${connectionId}`)
         const connection = this.editor.getConnection(connectionId);
-        if (!connection){
+        if (!connection) {
             console.warn(`Failed to remove connection by Id ${connectionId} - not found`)
             return false;
         }
         if (await this.editor.removeConnection(connectionId)) {
+            if (this._autoArrange){
+                this.arrangeRequests.next(`Removed connection ${connectionId}`);
+            }
             return true;
         } else {
             console.warn(`Failed to remove connection by Id ${connectionId}`)
@@ -104,14 +168,17 @@ export class ReteEditorWrapper {
 
     public async addNode(label: string, nodeId: string): Promise<Node> {
         console.info(`Adding new node, label: ${label}, Id: ${nodeId}`)
-        
+
         const node = new Node(label);
-        if (nodeId){
+        if (nodeId) {
             node.id = nodeId;
         }
         node.addOutput("O", new ClassicPreset.Output(this.socket, undefined, true));
         node.addInput("I", new ClassicPreset.Input(this.socket, undefined, true));
         if (await this.editor.addNode(node)) {
+            if (this._autoArrange){
+                this.arrangeRequests.next(`Added node ${node.id}`);
+            }
             return node;
         } else {
             throw "Failed to add node";
@@ -121,11 +188,14 @@ export class ReteEditorWrapper {
     public async removeNode(nodeId: string): Promise<boolean> {
         console.info(`Removing node by Id: ${nodeId}`)
         const connections = this.editor.getConnections().filter(x => x.source === nodeId || x.target === nodeId);
-        for (let connection of connections){
+        for (let connection of connections) {
             await this.removeConnection(connection.id);
         }
 
         if (await this.editor.removeNode(nodeId)) {
+            if (this._autoArrange){
+                this.arrangeRequests.next(`Removed node ${nodeId}`);
+            }
             return true;
         } else {
             console.warn(`Failed to remove node by Id: ${nodeId}`);
@@ -145,18 +215,28 @@ export class ReteEditorWrapper {
         });
     }
 
-    public updateNode(id: string){
+    public updateNode(id: string) {
+        console.info(`Updating node: ${id}`)
         this.areaPlugin.update('node', id);
     }
 
-    public getSelectedNodes(){
+    public updateConnection(id: string) {
+        console.info(`Updating connection: ${id}`)
+        this.areaPlugin.update('connection', id);
+    }
+
+    public updateControl(id: string) {
+        this.areaPlugin.update('connection', id);
+    }
+
+    public getSelectedNodes() {
         return this.editor.getNodes().filter(x => x.selected);
     }
-    
-    public getSelectedNodesIds(){
+
+    public getSelectedNodesIds() {
         return this.getSelectedNodes().map(x => x.id);
     }
-    
+
     public zoomAtNodes() {
         AreaExtensions.zoomAt(this.areaPlugin, this.editor.getNodes());
     }
@@ -171,7 +251,22 @@ export class ReteEditorWrapper {
                 await AreaExtensions.zoomAt(area, editor.getNodes());
             }
         });
-        await this.arrangePlugin.layout({ applier: animate ? applier : undefined });
+
+        const elkOptions = {};
+
+        if (this._arrangeDirection) {
+            elkOptions["elk.direction"] = this._arrangeDirection;
+        }
+
+        if (this._arrangeAlgorithm) {
+            elkOptions["elk.algorithm"] = this._arrangeAlgorithm;
+        }
+
+        await this.arrangePlugin.layout(
+            {
+                applier: animate ? applier : undefined,
+                options: elkOptions
+            });
     }
 
     public async setup() {
@@ -192,8 +287,6 @@ export class ReteEditorWrapper {
         await this.areaPlugin.translate(nodeA.id, {x: 0, y: 0});
         await this.areaPlugin.translate(nodeB.id, {x: 270, y: 0});
 
-
-
         setTimeout(() => {
             // wait until nodes rendered because they dont have predefined width and height
             this.zoomAtNodes();
@@ -203,7 +296,7 @@ export class ReteEditorWrapper {
     public setDotnetEventsHandler(dotnetHelper: any) {
         this.dotnetHelper = dotnetHelper;
     }
-    
+
     public async init(container: HTMLElement) {
         this.editor = new NodeEditor<Schemes>();
         this.areaPlugin = new AreaPlugin<Schemes, AreaExtra>(container);
@@ -230,6 +323,9 @@ export class ReteEditorWrapper {
                 node(data) {
                     return ReteCustomNode
                 },
+                connection(context) {
+                    return ReteCustomConnection;
+                }
             }
         }))
 
@@ -241,9 +337,9 @@ export class ReteEditorWrapper {
             }
             return context
         })
-        
+
         this.areaPlugin.addPipe(context => {
-            if (context.type === 'nodepicked' || 
+            if (context.type === 'nodepicked' ||
                 context.type === 'render') {
                 this.updateSelection();
             }
@@ -251,10 +347,28 @@ export class ReteEditorWrapper {
         })
 
         AreaExtensions.simpleNodesOrder(this.areaPlugin);
+
+        this.sizeWatcher = new SizeWatcher(container);
+        this.sizeWatcher.addSizeChangeHandler(async (width, height) => {
+            if (this._autoArrange){
+                this.arrangeRequests.next(`Container(id: ${container.id}) size changed: ${width}x${height}`)
+            }
+        });
+
+        this.anchors.add(
+            this.arrangeRequests.pipe(
+                throttleTime(500, undefined, { leading: true, trailing: true }),
+                switchMap(reason => {                    
+                    console.info(`Rearranging nodes, reason: ${reason}`);
+                    return this.arrangeNodes(true);
+                })
+            ).subscribe())
     }
 
     public destroy() {
+        this.anchors.unsubscribe();
         this.areaPlugin?.destroy();
+        this.sizeWatcher?.destroy()
     }
 
     private updateSelection() {
@@ -288,8 +402,8 @@ export class ReteEditorWrapper {
             if (addedNodes.length > 0) {
                 console.log(`Selection changed, added nodes: ${addedNodes.join(', ')}, current selection: ${currentSelectedNodes.map(x => x.id).join(', ')}`);
             }
-            
-            if (this.dotnetHelper){
+
+            if (this.dotnetHelper) {
                 this.dotnetHelper.invokeMethodAsync("OnSelectionChanged", Array.from(currentSelectedNodeIds))
             }
         }

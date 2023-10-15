@@ -1,9 +1,9 @@
 ﻿const BlazorReteJsInterop = {
-    setObjectProperty: function (obj, propName, value) {
+    setObjectField: function (obj, propName, value) {
         obj[propName] = value;
     },
 
-    getObjectProperty: function (obj, propName, defaultValue) {
+    getObjectField: function (obj, propName, defaultValue) {
         return obj[propName] ?? defaultValue;
     }
 };
