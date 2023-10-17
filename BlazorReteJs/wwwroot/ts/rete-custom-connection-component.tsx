@@ -1,7 +1,7 @@
 import * as React from "react";
 import styled, {css} from "styled-components";
 import { ClassicScheme, Presets } from "rete-react-plugin";
-import {ReteCustomConnectionProps, ConnectionExtraData} from "./reteEditor.shared";
+import {ReteCustomConnectionProps, ConnectionExtraData} from "./rete-editor-shared";
 
 const { useConnection } = Presets.classic;
 
@@ -35,7 +35,7 @@ const Path = styled.path<ConnectionExtraData & { styles?: (props: any) => any }>
   ${(props) => props.styles && props.styles(props)}
 `;
 
-export function ReteCustomConnection<Scheme extends ClassicScheme>(props: ReteCustomConnectionProps<Scheme>) {
+export function ReteCustomConnectionComponent<Scheme extends ClassicScheme>(props: ReteCustomConnectionProps<Scheme>) {
     const { path } = useConnection();
     if (!path) return null;
     

@@ -1,12 +1,12 @@
 ﻿import React = require("react");
-import {createEditor} from "./reteEditor";
+import {createEditor} from "./rete-editor-factory";
 import {useRete} from "rete-react-plugin";
 
-export type ReteAppProps = {
+export type ReteComponentProps = {
     id: string;
 };
 
-export default function ReteApp(props: ReteAppProps) {
+export default function ReteComponent(props: ReteComponentProps) {
     const [ref, editor] = useRete(createEditor);
 
     return (

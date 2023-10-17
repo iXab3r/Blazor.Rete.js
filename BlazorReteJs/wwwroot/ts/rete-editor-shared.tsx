@@ -1,6 +1,14 @@
 ﻿import {ClassicPreset, GetSchemes} from "rete";
 import {ClassicScheme, Presets, RenderEmit} from "rete-react-plugin";
 
+export class ReteNodeScheme extends ClassicPreset.Node {
+    width: number = 180;
+    height: number = 90;
+    isActive: boolean;
+}
+
+export class ReteConnectionScheme<N extends ReteNodeScheme> extends ClassicPreset.Connection<N, N> {}
+
 export type NodeExtraData = { 
     width?: number; 
     height?: number;
@@ -14,16 +22,9 @@ export type ConnectionExtraData = {
     isLoop?: boolean 
 };
 
-export class Node extends ClassicPreset.Node {
-    width: number = 180;   
-    height: number = 90;
-    isActive: boolean;
-}
-
-export class Connection<N extends Node> extends ClassicPreset.Connection<N, N> {
-}
-
-export type Schemes = GetSchemes<Node, Connection<Node>>;
+export type ReteNodeSchemes = ReteNodeScheme;
+export type ReteConnectionSchemes = ReteConnectionScheme<ReteNodeSchemes>;
+export type Schemes = GetSchemes<ReteNodeSchemes, ReteConnectionSchemes>;
 
 export type ReteCustomNodeProps<S extends ClassicScheme> = {
     data: S["Node"] & NodeExtraData;
@@ -42,13 +43,3 @@ export type NodeComponent<Scheme extends ClassicScheme> = (
     props: ReteCustomNodeProps<Scheme>
 ) => JSX.Element;
 
-export function sortByIndex<T extends [string, undefined | { index?: number }][]>(
-    entries: T
-) {
-    entries.sort((a, b) => {
-        const ai = a[1]?.index || 0;
-        const bi = b[1]?.index || 0;
-
-        return ai - bi;
-    });
-}

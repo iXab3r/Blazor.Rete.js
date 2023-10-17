@@ -16,9 +16,6 @@
         <PackageReference Include="ReactiveUI" Version="18.0.10"/>
     </ItemGroup>
 
-    <ItemGroup>
-        <Folder Include="wwwroot\js\"/>
-    </ItemGroup>
 
 
     <ItemGroup>
@@ -30,6 +27,7 @@
         <DependentUpon>BlazorReteEditor.razor</DependentUpon>
       </Compile>
     </ItemGroup>
+
 
     <Target Name="NPM Install" AfterTargets="PreBuildEvent">
         <Exec Command="npm install"/>

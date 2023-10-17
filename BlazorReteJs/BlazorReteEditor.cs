@@ -54,7 +54,7 @@ public partial class BlazorReteEditor
     {
         utilsModule = (await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./_content/BlazorReteJs/js/BlazorReteJsInterop.js"))
                       ?? throw new FileLoadException("Failed to load Utils JS module");
-        reteModule = (await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./_content/BlazorReteJs/js/reteInterop.js"))
+        reteModule = (await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./_content/BlazorReteJs/js/rete-editor-factory.js"))
                      ?? throw new FileLoadException("Failed to load Rete JS module");
         var editorReference = await reteModule!.InvokeAsync<IJSObjectReference>("renderEditor", editorRef)
                               ?? throw new ArgumentException("Failed to initialize Rete.js editor");

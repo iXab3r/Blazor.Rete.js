@@ -1,4 +1,4 @@
-export class SizeWatcher {
+export class ElementSizeWatcher {
     private element: HTMLElement;
     private observer: ResizeObserver;
     private handlers: Array<(width: number, height: number) => Promise<void>> = [];

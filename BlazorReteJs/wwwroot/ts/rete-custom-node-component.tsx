@@ -2,7 +2,8 @@ import * as React from "react";
 import {ClassicScheme, Presets} from "rete-react-plugin";
 import styled, {css} from "styled-components";
 import {$nodewidth, $socketmargin, $socketsize} from "./vars";
-import {NodeExtraData, ReteCustomNodeProps, sortByIndex} from "./reteEditor.shared";
+import {NodeExtraData, ReteCustomNodeProps} from "./rete-editor-shared";
+import {sortByIndex} from "./scaffolding/utils";
 
 const {RefSocket, RefControl} = Presets.classic;
 
@@ -112,7 +113,7 @@ export const NodeStyles = styled.div<NodeExtraData & { styles?: (props: any) => 
   ${(props) => props.styles && props.styles(props)}
 `;
 
-export function ReteCustomNode<Scheme extends ClassicScheme>(props: ReteCustomNodeProps<Scheme>) {
+export function ReteCustomNodeComponent<Scheme extends ClassicScheme>(props: ReteCustomNodeProps<Scheme>) {
     const inputs = Object.entries(props.data.inputs);
     const outputs = Object.entries(props.data.outputs);
     const controls = Object.entries(props.data.controls);

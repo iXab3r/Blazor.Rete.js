@@ -1,38 +1,34 @@
 ﻿import {createRoot} from "react-dom/client";
 import {ClassicPreset, NodeEditor} from "rete";
 import {AreaExtensions, AreaPlugin} from "rete-area-plugin";
-import {Node, Schemes} from './reteEditor.shared'
+import {ReteNodeScheme, Schemes} from './rete-editor-shared'
+import {ElementSizeWatcher} from "./scaffolding/element-size-watcher";
 
 import {ArrangeAppliers, AutoArrangePlugin, Presets as ArrangePresets} from "rete-auto-arrange-plugin";
 import {ConnectionPlugin, Presets as ConnectionPresets} from "rete-connection-plugin";
 import {Presets, ReactPlugin} from "rete-react-plugin";
-import {AreaExtra} from "./reteEditor";
-import {prepareBackgroundElement} from "./custom-background";
-import {ReteCustomNode} from "./rete-custom-node";
+import {AreaExtra} from "./rete-editor-factory";
 import {ReadonlyPlugin} from "rete-readonly-plugin";
-import {SizeWatcher} from "./sizeWatcher";
+import { DockPlugin, DockPresets } from "rete-dock-plugin";
 
-import {Subject, Subscription } from 'rxjs';
-import {throttleTime, switchMap, debounceTime, map} from 'rxjs/operators';
-import {ReteCustomConnection} from "./rete-custom-connection";
+import {Subject, Subscription} from 'rxjs';
+import {switchMap, throttleTime} from 'rxjs/operators';
 
-interface DotNetHelper {
-    invokeMethodAsync<T>(methodName: string, ...args: any[]): Promise<T>;
-}
+import {ReteCustomNodeComponent} from "./rete-custom-node-component";
+import {ReteCustomConnectionComponent} from "./rete-custom-connection-component";
 
 export class ReteEditorWrapper {
-    private editor: NodeEditor<Schemes>;
-    private areaPlugin: AreaPlugin<Schemes, AreaExtra>;
-    private renderPlugin: ReactPlugin<Schemes, AreaExtra>;
-    private connectionPlugin: ConnectionPlugin<Schemes, AreaExtra>;
-    private arrangePlugin: AutoArrangePlugin<Schemes>;
-    private readonlyPlugin: ReadonlyPlugin<Schemes>;
-    private socket = new ClassicPreset.Socket("socket");
-    private dotnetHelper: any;
-    private sizeWatcher: SizeWatcher;
-    private readonly selectedNodes = new Set<string>();
-    private readonly background: HTMLDivElement = prepareBackgroundElement();
-    private readonly arrangeRequests = new Subject<string>();
+    private readonly editor: NodeEditor<Schemes>;
+    private readonly editorSizeWatcher: ElementSizeWatcher;
+    private readonly areaPlugin: AreaPlugin<Schemes, AreaExtra>;
+    private readonly renderPlugin: ReactPlugin<Schemes, AreaExtra>;
+    private readonly connectionPlugin: ConnectionPlugin<Schemes, AreaExtra>;
+    private readonly arrangePlugin: AutoArrangePlugin<Schemes>;
+    private readonly readonlyPlugin: ReadonlyPlugin<Schemes>;
+    private readonly socket: ClassicPreset.Socket = new ClassicPreset.Socket("socket");
+    private readonly selectedNodes: Set<string> = new Set<string>();
+    private readonly background: HTMLDivElement = this.prepareBackgroundElement();
+    private readonly arrangeRequests: any = new Subject<string>();
     private readonly anchors: Subscription = new Subscription();
 
     private _backgroundEnabled: boolean = false;
@@ -40,8 +36,74 @@ export class ReteEditorWrapper {
     private _arrangeAlgorithm: string = undefined;
     private _readonly: boolean = false;
     private _autoArrange: boolean = false;
+    private _dotnetHelper: any;
 
-    constructor() {
+    constructor(container: HTMLElement) {
+        this.editor = new NodeEditor<Schemes>();
+        this.areaPlugin = new AreaPlugin<Schemes, AreaExtra>(container);
+        this.connectionPlugin = new ConnectionPlugin<Schemes, AreaExtra>();
+        this.renderPlugin = new ReactPlugin<Schemes, AreaExtra>({createRoot});
+        this.readonlyPlugin = new ReadonlyPlugin<Schemes>();
+
+        const nodeSelector = AreaExtensions.selectableNodes(this.areaPlugin, AreaExtensions.selector(), {
+            accumulating: AreaExtensions.accumulateOnCtrl()
+        });
+
+        this.connectionPlugin.addPreset(ConnectionPresets.classic.setup());
+        this.editor.use(this.areaPlugin);
+        this.editor.use(this.readonlyPlugin.root);
+        this.areaPlugin.use(this.connectionPlugin);
+        this.areaPlugin.use(this.renderPlugin);
+
+        this.arrangePlugin = new AutoArrangePlugin<Schemes>();
+        this.arrangePlugin.addPreset(ArrangePresets.classic.setup());
+        this.areaPlugin.use(this.arrangePlugin);
+
+        this.renderPlugin.addPreset(Presets.classic.setup({
+            customize: {
+                node(data) {
+                    return ReteCustomNodeComponent
+                },
+                connection(context) {
+                    return ReteCustomConnectionComponent;
+                }
+            }
+        }))
+
+        this.editor.addPipe(context => {
+            if (context.type === 'nodecreated' ||
+                context.type === 'noderemoved' ||
+                context.type === 'cleared') {
+                this.updateSelection();
+            }
+            return context
+        })
+
+        this.areaPlugin.addPipe(context => {
+            if (context.type === 'nodepicked' ||
+                context.type === 'render') {
+                this.updateSelection();
+            }
+            return context
+        })
+
+        AreaExtensions.simpleNodesOrder(this.areaPlugin);
+
+        this.editorSizeWatcher = new ElementSizeWatcher(container);
+        this.editorSizeWatcher.addSizeChangeHandler(async (width, height) => {
+            if (this._autoArrange) {
+                this.arrangeRequests.next(`Container(id: ${container.id}) size changed: ${width}x${height}`)
+            }
+        });
+
+        this.anchors.add(
+            this.arrangeRequests.pipe(
+                throttleTime(500, undefined, {leading: true, trailing: true}),
+                switchMap(reason => {
+                    console.info(`Rearranging nodes, reason: ${reason}`);
+                    return this.arrangeNodes(true);
+                })
+            ).subscribe())
     }
 
     public getAutoArrange(): boolean {
@@ -56,7 +118,7 @@ export class ReteEditorWrapper {
         console.info(`Setting AutoArrange: ${this._autoArrange} => ${value}`);
         this._autoArrange = value;
 
-        if (this._autoArrange){
+        if (this._autoArrange) {
             this.arrangeRequests.next(`Enabled auto-arrange`);
         }
     }
@@ -72,7 +134,7 @@ export class ReteEditorWrapper {
 
         console.info(`Setting arrange direction: ${this._arrangeDirection} => ${value}`);
         this._arrangeDirection = value;
-        if (this._autoArrange){
+        if (this._autoArrange) {
             this.arrangeRequests.next(`Changed arrange direction to ${value}`);
         }
     }
@@ -88,7 +150,7 @@ export class ReteEditorWrapper {
 
         console.info(`Setting arrange algorithm: ${this._arrangeAlgorithm} => ${value}`);
         this._arrangeAlgorithm = value;
-        if (this._autoArrange){
+        if (this._autoArrange) {
             this.arrangeRequests.next(`Changed arrange algorithm to ${value}`);
         }
     }
@@ -139,7 +201,7 @@ export class ReteEditorWrapper {
             connection.id = connectionId;
         }
         if (await this.editor.addConnection(connection)) {
-            if (this._autoArrange){
+            if (this._autoArrange) {
                 this.arrangeRequests.next(`Added new connection ${sourceNodeId} => ${targetNodeId} (${connection.id})`);
             }
             return connection;
@@ -156,7 +218,7 @@ export class ReteEditorWrapper {
             return false;
         }
         if (await this.editor.removeConnection(connectionId)) {
-            if (this._autoArrange){
+            if (this._autoArrange) {
                 this.arrangeRequests.next(`Removed connection ${connectionId}`);
             }
             return true;
@@ -166,17 +228,17 @@ export class ReteEditorWrapper {
         }
     }
 
-    public async addNode(label: string, nodeId: string): Promise<Node> {
+    public async addNode(label: string, nodeId: string): Promise<ReteNodeScheme> {
         console.info(`Adding new node, label: ${label}, Id: ${nodeId}`)
 
-        const node = new Node(label);
+        const node = new ReteNodeScheme(label);
         if (nodeId) {
             node.id = nodeId;
         }
         node.addOutput("O", new ClassicPreset.Output(this.socket, undefined, true));
         node.addInput("I", new ClassicPreset.Input(this.socket, undefined, true));
         if (await this.editor.addNode(node)) {
-            if (this._autoArrange){
+            if (this._autoArrange) {
                 this.arrangeRequests.next(`Added node ${node.id}`);
             }
             return node;
@@ -193,7 +255,7 @@ export class ReteEditorWrapper {
         }
 
         if (await this.editor.removeNode(nodeId)) {
-            if (this._autoArrange){
+            if (this._autoArrange) {
                 this.arrangeRequests.next(`Removed node ${nodeId}`);
             }
             return true;
@@ -226,11 +288,15 @@ export class ReteEditorWrapper {
     }
 
     public updateControl(id: string) {
-        this.areaPlugin.update('connection', id);
+        this.areaPlugin.update('control', id);
+    }
+
+    public getNodes() {
+        return this.editor.getNodes();
     }
 
     public getSelectedNodes() {
-        return this.editor.getNodes().filter(x => x.selected);
+        return this.getNodes().filter(x => x.selected);
     }
 
     public getSelectedNodesIds() {
@@ -269,106 +335,23 @@ export class ReteEditorWrapper {
             });
     }
 
-    public async setup() {
-        console.info(`Initializing editor`);
-        const nodeA = new Node("A");
-        nodeA.isActive = true;
-        nodeA.addControl("a", new ClassicPreset.InputControl("text", {initial: "a"}));
-        nodeA.addOutput("a", new ClassicPreset.Output(this.socket));
-        await this.editor.addNode(nodeA);
-
-        const nodeB = new Node("B");
-        nodeB.addControl("b", new ClassicPreset.InputControl("text", {initial: "b"}));
-        nodeB.addInput("b", new ClassicPreset.Input(this.socket));
-        await this.editor.addNode(nodeB);
-
-        await this.editor.addConnection(new ClassicPreset.Connection(nodeA, "a", nodeB, "b"));
-
-        await this.areaPlugin.translate(nodeA.id, {x: 0, y: 0});
-        await this.areaPlugin.translate(nodeB.id, {x: 270, y: 0});
-
-        setTimeout(() => {
-            // wait until nodes rendered because they dont have predefined width and height
-            this.zoomAtNodes();
-        }, 10);
-    }
-
     public setDotnetEventsHandler(dotnetHelper: any) {
-        this.dotnetHelper = dotnetHelper;
-    }
-
-    public async init(container: HTMLElement) {
-        this.editor = new NodeEditor<Schemes>();
-        this.areaPlugin = new AreaPlugin<Schemes, AreaExtra>(container);
-        this.connectionPlugin = new ConnectionPlugin<Schemes, AreaExtra>();
-        this.renderPlugin = new ReactPlugin<Schemes, AreaExtra>({createRoot});
-        this.readonlyPlugin = new ReadonlyPlugin<Schemes>();
-
-        const nodeSelector = AreaExtensions.selectableNodes(this.areaPlugin, AreaExtensions.selector(), {
-            accumulating: AreaExtensions.accumulateOnCtrl()
-        });
-
-        this.connectionPlugin.addPreset(ConnectionPresets.classic.setup());
-        this.editor.use(this.areaPlugin);
-        this.editor.use(this.readonlyPlugin.root);
-        this.areaPlugin.use(this.connectionPlugin);
-        this.areaPlugin.use(this.renderPlugin);
-
-        this.arrangePlugin = new AutoArrangePlugin<Schemes>();
-        this.arrangePlugin.addPreset(ArrangePresets.classic.setup());
-        this.areaPlugin.use(this.arrangePlugin);
-
-        this.renderPlugin.addPreset(Presets.classic.setup({
-            customize: {
-                node(data) {
-                    return ReteCustomNode
-                },
-                connection(context) {
-                    return ReteCustomConnection;
-                }
-            }
-        }))
-
-        this.editor.addPipe(context => {
-            if (context.type === 'nodecreated' ||
-                context.type === 'noderemoved' ||
-                context.type === 'cleared') {
-                this.updateSelection();
-            }
-            return context
-        })
-
-        this.areaPlugin.addPipe(context => {
-            if (context.type === 'nodepicked' ||
-                context.type === 'render') {
-                this.updateSelection();
-            }
-            return context
-        })
-
-        AreaExtensions.simpleNodesOrder(this.areaPlugin);
-
-        this.sizeWatcher = new SizeWatcher(container);
-        this.sizeWatcher.addSizeChangeHandler(async (width, height) => {
-            if (this._autoArrange){
-                this.arrangeRequests.next(`Container(id: ${container.id}) size changed: ${width}x${height}`)
-            }
-        });
-
-        this.anchors.add(
-            this.arrangeRequests.pipe(
-                throttleTime(500, undefined, { leading: true, trailing: true }),
-                switchMap(reason => {                    
-                    console.info(`Rearranging nodes, reason: ${reason}`);
-                    return this.arrangeNodes(true);
-                })
-            ).subscribe())
+        this._dotnetHelper = dotnetHelper;
     }
 
     public destroy() {
         this.anchors.unsubscribe();
         this.areaPlugin?.destroy();
-        this.sizeWatcher?.destroy()
+        this.editorSizeWatcher?.destroy()
+    }
+
+    private prepareBackgroundElement() {
+        const background = document.createElement('div');
+
+        background.classList.add('background');
+        background.classList.add('fill-area');
+
+        return background;
     }
 
     private updateSelection() {
@@ -403,8 +386,8 @@ export class ReteEditorWrapper {
                 console.log(`Selection changed, added nodes: ${addedNodes.join(', ')}, current selection: ${currentSelectedNodes.map(x => x.id).join(', ')}`);
             }
 
-            if (this.dotnetHelper) {
-                this.dotnetHelper.invokeMethodAsync("OnSelectionChanged", Array.from(currentSelectedNodeIds))
+            if (this._dotnetHelper) {
+                this._dotnetHelper.invokeMethodAsync("OnSelectionChanged", Array.from(currentSelectedNodeIds))
             }
         }
     }
