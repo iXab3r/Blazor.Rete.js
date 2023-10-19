@@ -1,4 +1,4 @@
-using Playground.WebAssembly;
+using BlazorReteJs.Playground;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 

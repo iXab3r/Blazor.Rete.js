@@ -16,6 +16,8 @@
             <button class="btn btn-primary" @onclick="@(async () => await editor.JsEditor.ZoomAtNodes())">ZoomAt Nodes</button>
             <button class="btn btn-primary" @onclick="@(async () => await editor.JsEditor.EditorRef.InvokeVoidAsync("toggleIsActive"))">Toggle IsActive</button>
             <button class="btn btn-primary" @onclick="@(async () => await editor.JsEditor.Clear())">Clear</button>
+            <button class="btn btn-primary" @onclick="@(async () => await editor.JsEditor.BackgroundEnabled.SetValue(true))">BG Enable</button>
+            <button class="btn btn-primary" @onclick="@(async () => await editor.JsEditor.BackgroundEnabled.SetValue(false))">BG Disable</button>
         </div>
         <div>
             Selection:
@@ -76,6 +78,7 @@
         var connections = await editor.GetConnectionsCache();
         connections
             .Connect()
+            .StartWithEmpty()
             .Subscribe(x =>
             {
                 Connections = connections.Items.ToArray();
@@ -88,6 +91,7 @@
         var nodes = await editor.GetNodesCache();
         nodes
             .Connect()
+            .StartWithEmpty()
             .Subscribe(x =>
             {
                 Nodes = nodes.Items.ToArray();
@@ -100,6 +104,7 @@
         var selectedNodes = await editor.GetSelectedNodes();
         selectedNodes
             .Connect()
+            .StartWithEmpty()
             .Subscribe(x =>
             {
                 SelectedNodeIds = selectedNodes.Items.ToArray();
