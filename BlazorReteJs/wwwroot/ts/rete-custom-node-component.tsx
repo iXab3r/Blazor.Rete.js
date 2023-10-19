@@ -34,11 +34,10 @@ export const NodeStyles = styled.div<NodeExtraData & { styles?: (props: any) => 
     text-align: center;
     overflow: hidden;
     text-overflow: ellipsis;
-    text-shadow:
-              -1px -1px 0 #000,
-              1px -1px 0 #000,
-            -1px 1px 0 #000,
-            1px 1px 0 #000; /* This gives a black outline around the text */
+    text-shadow: -1px -1px 0 #000,
+      1px -1px 0 #000,
+    -1px 1px 0 #000,
+    1px 1px 0 #000; /* This gives a black outline around the text */
   }
 
   .glossy {
@@ -120,8 +119,9 @@ export function ReteCustomNodeComponent<Scheme extends ClassicScheme>(props: Ret
     const selected = props.data.selected || false;
     const isActive = props.data.isActive || false;
     const isBusy = props.data.isBusy || false;
+    const showSockets = props.data.showSockets || true;
     const {id, label, width, height} = props.data;
-
+    
     sortByIndex(inputs);
     sortByIndex(outputs);
     sortByIndex(controls);
@@ -140,9 +140,8 @@ export function ReteCustomNodeComponent<Scheme extends ClassicScheme>(props: Ret
                 {label}
             </div>
             <div className="d-flex">
-
                 {/* Inputs */}
-                {inputs.map(
+                {showSockets && inputs.map(
                     ([key, input]) =>
                         input && (
                             <div className="input" key={key} data-testid={`input-${key}`}>
@@ -172,8 +171,9 @@ export function ReteCustomNodeComponent<Scheme extends ClassicScheme>(props: Ret
                 <div className="flex-grow-1 text-center">
                     {isBusy && <div className="spinner-border text-warning"></div>}
                 </div>
+
                 {/* Outputs */}
-                {outputs.map(
+                {showSockets && outputs.map(
                     ([key, output]) =>
                         output && (
                             <div className="output" key={key} data-testid={`output-${key}`}>
@@ -194,7 +194,7 @@ export function ReteCustomNodeComponent<Scheme extends ClassicScheme>(props: Ret
             </div>
 
             {/* Controls */}
-            {controls.map(([key, control]) => {
+            {showSockets && controls.map(([key, control]) => {
                 return control ? (
                     <RefControl
                         key={key}

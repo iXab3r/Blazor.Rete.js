@@ -18,7 +18,11 @@ export async function renderEditor(container: HTMLElement): Promise<ReteEditorWr
 
 export async function createEditor(container: HTMLElement) {
     console.info(`Creating Rete editor in container(id: ${container.id}): ${container}`)
-    const editor = new ReteEditorWrapper(container);
+    const editorCanvas = container.querySelector<HTMLElement>("#rete-editor-canvas");
+    if (!editorCanvas){
+        throw new DOMException(`Failed to find editor canvas`); 
+    }
+    const editor = new ReteEditorWrapper(editorCanvas);
     editors[container.id] = editor;
     return {
         destroy: () => editor.destroy()
@@ -33,7 +37,7 @@ function getEditor(container: HTMLElement): ReteEditorWrapper {
 }
 
 async function createEditorElement(container: HTMLElement): Promise<void> {
-    console.info(`Creating Rete container: ${container}`);
+    console.info(`Creating React Rete container inside(id: ${container.id}): ${container}`);
     const root = createRoot(container!);
     root.render(
         <StrictMode>

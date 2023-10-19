@@ -9,13 +9,17 @@ import {ConnectionPlugin, Presets as ConnectionPresets} from "rete-connection-pl
 import {Presets, ReactPlugin} from "rete-react-plugin";
 import {AreaExtra} from "./rete-editor-factory";
 import {ReadonlyPlugin} from "rete-readonly-plugin";
-import { DockPlugin, DockPresets } from "rete-dock-plugin";
+import {DockPlugin} from "rete-dock-plugin";
 
-import {Subject, Subscription} from 'rxjs';
+import {Subject, Subscription, Observable} from 'rxjs';
 import {switchMap, throttleTime} from 'rxjs/operators';
 
 import {ReteCustomNodeComponent} from "./rete-custom-node-component";
 import {ReteCustomConnectionComponent} from "./rete-custom-connection-component";
+import {verticalDockSetup} from "./rete-dock-component";
+import {ReteEditorListener} from "./rete-editor-listener";
+import {RxObservableCollection} from "./collections/rx-observable-collection";
+import {DotnetObjectReference} from "./scaffolding/dotnet-object-reference";
 
 export class ReteEditorWrapper {
     private readonly editor: NodeEditor<Schemes>;
@@ -25,9 +29,10 @@ export class ReteEditorWrapper {
     private readonly connectionPlugin: ConnectionPlugin<Schemes, AreaExtra>;
     private readonly arrangePlugin: AutoArrangePlugin<Schemes>;
     private readonly readonlyPlugin: ReadonlyPlugin<Schemes>;
-    private readonly socket: ClassicPreset.Socket = new ClassicPreset.Socket("socket");
+    private readonly dockPlugin: DockPlugin<Schemes>;
     private readonly selectedNodes: Set<string> = new Set<string>();
     private readonly background: HTMLDivElement = this.prepareBackgroundElement();
+    private readonly eventsListener: ReteEditorListener;
     private readonly arrangeRequests: any = new Subject<string>();
     private readonly anchors: Subscription = new Subscription();
 
@@ -36,7 +41,6 @@ export class ReteEditorWrapper {
     private _arrangeAlgorithm: string = undefined;
     private _readonly: boolean = false;
     private _autoArrange: boolean = false;
-    private _dotnetHelper: any;
 
     constructor(container: HTMLElement) {
         this.editor = new NodeEditor<Schemes>();
@@ -70,24 +74,36 @@ export class ReteEditorWrapper {
             }
         }))
 
-        this.editor.addPipe(context => {
-            if (context.type === 'nodecreated' ||
-                context.type === 'noderemoved' ||
-                context.type === 'cleared') {
-                this.updateSelection();
-            }
-            return context
-        })
-
-        this.areaPlugin.addPipe(context => {
-            if (context.type === 'nodepicked' ||
-                context.type === 'render') {
-                this.updateSelection();
-            }
-            return context
-        })
-
+        this.eventsListener = new ReteEditorListener(this.editor, this.areaPlugin);
         AreaExtensions.simpleNodesOrder(this.areaPlugin);
+
+        this.dockPlugin = new DockPlugin<Schemes>();
+        this.dockPlugin.addPreset(verticalDockSetup({ area: this.areaPlugin }));
+        this.areaPlugin.use(this.dockPlugin);
+
+        this.dockPlugin.add(() => new ReteNodeScheme("AlwaysFailure"));
+        this.dockPlugin.add(() => new ReteNodeScheme("AlwaysSuccess"));
+        this.dockPlugin.add(() => new ReteNodeScheme("Fallback"));
+        this.dockPlugin.add(() => new ReteNodeScheme("IfThenElse"));
+        this.dockPlugin.add(() => new ReteNodeScheme("Parallel"));
+        this.dockPlugin.add(() => new ReteNodeScheme("Sequence"));
+        this.dockPlugin.add(() => new ReteNodeScheme("Switch2"));
+        this.dockPlugin.add(() => new ReteNodeScheme("Switch3"));
+        this.dockPlugin.add(() => new ReteNodeScheme("Switch4"));
+        this.dockPlugin.add(() => new ReteNodeScheme("Switch5"));
+        this.dockPlugin.add(() => new ReteNodeScheme("Switch6"));
+        this.dockPlugin.add(() => new ReteNodeScheme("WhileDoElse"));
+        this.dockPlugin.add(() => new ReteNodeScheme("Cooldown"));
+        this.dockPlugin.add(() => new ReteNodeScheme("Delay"));
+        this.dockPlugin.add(() => new ReteNodeScheme("ForceFailure"));
+        this.dockPlugin.add(() => new ReteNodeScheme("ForceSuccess"));
+        this.dockPlugin.add(() => new ReteNodeScheme("Inverter"));
+        this.dockPlugin.add(() => new ReteNodeScheme("KeepRunningUntilFailure"));
+        this.dockPlugin.add(() => new ReteNodeScheme("Precondition"));
+        this.dockPlugin.add(() => new ReteNodeScheme("Repeat"));
+        this.dockPlugin.add(() => new ReteNodeScheme("RetryUntilSuccessful"));
+        this.dockPlugin.add(() => new ReteNodeScheme("Timeout"));
+
 
         this.editorSizeWatcher = new ElementSizeWatcher(container);
         this.editorSizeWatcher.addSizeChangeHandler(async (width, height) => {
@@ -106,6 +122,18 @@ export class ReteEditorWrapper {
             ).subscribe())
     }
 
+    public getSelectedNodesCollection(): RxObservableCollection<string>{
+        return this.eventsListener.getSelectedNodes();
+    }
+    
+    public getNodesCollection(): RxObservableCollection<string>{
+        return this.eventsListener.getNodes();
+    } 
+    
+    public getConnectionsCollection(): RxObservableCollection<string>{
+        return this.eventsListener.getConnections();
+    }
+    
     public getAutoArrange(): boolean {
         return this._autoArrange;
     }
@@ -196,7 +224,7 @@ export class ReteEditorWrapper {
         console.info(`Adding new connection: ${sourceNodeId} => ${targetNodeId}`)
         const sourceNode = this.editor.getNode(sourceNodeId);
         const targetNode = this.editor.getNode(targetNodeId);
-        const connection = new ClassicPreset.Connection(sourceNode, "O", targetNode, "I");
+        const connection = new ClassicPreset.Connection(sourceNode, sourceNode.outputSocket.id, targetNode, targetNode.inputSocket.id);
         if (connectionId) {
             connection.id = connectionId;
         }
@@ -235,8 +263,6 @@ export class ReteEditorWrapper {
         if (nodeId) {
             node.id = nodeId;
         }
-        node.addOutput("O", new ClassicPreset.Output(this.socket, undefined, true));
-        node.addInput("I", new ClassicPreset.Input(this.socket, undefined, true));
         if (await this.editor.addNode(node)) {
             if (this._autoArrange) {
                 this.arrangeRequests.next(`Added node ${node.id}`);
@@ -247,6 +273,14 @@ export class ReteEditorWrapper {
         }
     }
 
+    public async removeSelectedNodes(): Promise<void> {
+        const nodes = this.getSelectedNodes();
+        console.info(`Removing selected nodes: ${nodes.length}`)
+        for (let node of nodes) {
+            await this.removeNode(node.id);
+        }
+    }
+    
     public async removeNode(nodeId: string): Promise<boolean> {
         console.info(`Removing node by Id: ${nodeId}`)
         const connections = this.editor.getConnections().filter(x => x.source === nodeId || x.target === nodeId);
@@ -289,6 +323,14 @@ export class ReteEditorWrapper {
 
     public updateControl(id: string) {
         this.areaPlugin.update('control', id);
+    }
+
+    public getNodeById(id: string) {
+        return this.editor.getNode(id);
+    } 
+    
+    public getConnectionById(id: string) {
+        return this.editor.getConnection(id);
     }
 
     public getNodes() {
@@ -335,10 +377,6 @@ export class ReteEditorWrapper {
             });
     }
 
-    public setDotnetEventsHandler(dotnetHelper: any) {
-        this._dotnetHelper = dotnetHelper;
-    }
-
     public destroy() {
         this.anchors.unsubscribe();
         this.areaPlugin?.destroy();
@@ -353,42 +391,6 @@ export class ReteEditorWrapper {
 
         return background;
     }
-
-    private updateSelection() {
-        const currentSelectedNodes = this.getSelectedNodes();
-        const currentSelectedNodeIds = new Set(currentSelectedNodes.map(node => node.id.toString()));
-
-        const addedNodes: string[] = [];
-        const removedNodes: string[] = [];
-
-        // Remove nodes that are no longer selected
-        this.selectedNodes.forEach(nodeId => {
-            if (!currentSelectedNodeIds.has(nodeId)) {
-                this.selectedNodes.delete(nodeId);
-                removedNodes.push(nodeId);
-            }
-        });
-
-        // Add newly selected nodes
-        currentSelectedNodeIds.forEach(nodeId => {
-            if (!this.selectedNodes.has(nodeId)) {
-                this.selectedNodes.add(nodeId);
-                addedNodes.push(nodeId);
-            }
-        });
-
-        // Logging changes
-        if (addedNodes.length > 0 || removedNodes.length > 0) {
-            if (removedNodes.length > 0) {
-                console.log(`Selection changed, removed nodes: ${removedNodes.join(', ')}, current selection: ${currentSelectedNodes.map(x => x.id).join(', ')}`);
-            }
-            if (addedNodes.length > 0) {
-                console.log(`Selection changed, added nodes: ${addedNodes.join(', ')}, current selection: ${currentSelectedNodes.map(x => x.id).join(', ')}`);
-            }
-
-            if (this._dotnetHelper) {
-                this._dotnetHelper.invokeMethodAsync("OnSelectionChanged", Array.from(currentSelectedNodeIds))
-            }
-        }
-    }
+    
+    
 }

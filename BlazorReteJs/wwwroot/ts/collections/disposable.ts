@@ -1,0 +1,3 @@
+﻿interface Disposable {
+    dispose(): void;
+}

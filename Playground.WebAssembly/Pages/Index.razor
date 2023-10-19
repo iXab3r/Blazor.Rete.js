@@ -1,51 +1,126 @@
 ﻿@using BlazorReteJs
+@using BlazorReteJs.Api
+@using DynamicData
+@using ReactiveUI
 @page "/"
 @inject IJSRuntime JS
 
-<div class="d-flex flex-column" style="height: 100vh;">
-    <div class="w-100">
-        <p role="status">Current count: @currentCount</p>
-
-        <button class="btn btn-primary" @onclick="(() => currentCount++)">Click me</button>
-        <button class="btn btn-secondary" @onclick="@(async () => await sweetAlertModule.InvokeVoidAsync("showAlert", "test"))">Notification</button>
+<div class="d-flex flex-column h-100">
+    <div class="w-100" style="height: 15%">
         <div class="hstack">
             JavaScript
             <button class="btn btn-primary" @onclick="@(async () => await editor.JsEditor.AddNode($"JS-{Guid.NewGuid().ToString()}"))">Add Node</button>
+            <button class="btn btn-primary" @onclick="@(async () => await editor.JsEditor.RemoveSelectedNodes())">Remove Nodes</button>
             <button class="btn btn-primary" @onclick="@(async () => await editor.JsEditor.ArrangeNodes(false))">Arrange</button>
             <button class="btn btn-primary" @onclick="@(async () => await editor.JsEditor.ArrangeNodes(true))">Arrange Animated</button>
             <button class="btn btn-primary" @onclick="@(async () => await editor.JsEditor.ZoomAtNodes())">ZoomAt Nodes</button>
             <button class="btn btn-primary" @onclick="@(async () => await editor.JsEditor.EditorRef.InvokeVoidAsync("toggleIsActive"))">Toggle IsActive</button>
+            <button class="btn btn-primary" @onclick="@(async () => await editor.JsEditor.Clear())">Clear</button>
+        </div>
+        <div>
+            Selection:
+            @if (SelectedNodeIds == null)
+            {
+                <button class="btn btn-primary" @onclick="@(async () => await ListenToSelection())">Listen</button>
+            }
+            else
+            {
+                @string.Join("+", SelectedNodeIds)
+            }
         </div>
         <div class="hstack">
-            CS
-            <button class="btn btn-primary" @onclick="@(async () => await editor.AddNode($"CS-{Guid.NewGuid().ToString()}"))">Add Node</button>
-            <button class="btn btn-primary" @onclick="@(async () => {
-                                                                        var firstNode = await editor.AddNode($"CS-{Guid.NewGuid().ToString()}"); 
-                                                                        var secondNode = await editor.AddNode($"CS-{Guid.NewGuid().ToString()}"); await editor.AddConnection(firstNode, secondNode); })">Add Connection</button>
-            <button class="btn btn-primary" @onclick="@(async () => await editor.ToggleActive())">Toggle IsActive</button>
-            <button class="btn btn-primary" @onclick="@(async () => await editor.Clear())">Clear</button>
-            <button class="btn btn-primary" @onclick="@(async () => await editor.RemoveNode(editor.Nodes.Single(x => x.IsSelected)))">Remove selected</button>
-
+            Nodes:
+            @if (Nodes == null)
+            {
+                <button class="btn btn-primary" @onclick="@(async () => await ListenToNodes())">Listen</button>
+            }
+            else
+            {
+                @foreach (var node in Nodes)
+                {
+                    <div>@($"Node {node.Id} {node.Label.Value}")</div>
+                }
+            }
+        </div>
+        <div class="hstack">
+            Connections:
+            @if (Connections == null)
+            {
+                <button class="btn btn-primary" @onclick="@(async () => await ListenToConnections())">Listen</button>
+            }
+            else
+            {
+                @foreach (var connection in Connections)
+                {
+                    <div>@($"C {connection.Id} {connection.Source.Value}=>{connection.Target.Value}")</div>
+                }
+            }
         </div>
     </div>
-    <div class="flex-grow-1 w-100">
+    <div class="flex-grow-1 w-100" style="height: 85%">
         <BlazorReteEditor @ref="editor"/>
-    </div>
-    <div class="w-100">
-        <p role="status">Current count: @currentCount</p>
     </div>
 </div>
 
 @code {
-    private IJSObjectReference? sweetAlertModule;
-    private int currentCount = 0;
-
     private BlazorReteEditor editor;
 
-    protected override async Task OnInitializedAsync()
+    public string[] SelectedNodeIds { get; private set; }
+
+    public ReteNode[] Nodes { get; private set; }
+
+    public ReteConnection[] Connections { get; private set; }
+
+    protected async Task ListenToConnections()
     {
-        sweetAlertModule = await JS.InvokeAsync<IJSObjectReference>("import", "/_content/BlazorReteJs/js/sweetAlertInterop.js");
-        await base.OnInitializedAsync();
+        var connections = await editor.GetConnectionsCache();
+        connections
+            .Connect()
+            .Subscribe(x =>
+            {
+                Connections = connections.Items.ToArray();
+                StateHasChanged();
+            });
+    }
+
+    protected async Task ListenToNodes()
+    {
+        var nodes = await editor.GetNodesCache();
+        nodes
+            .Connect()
+            .Subscribe(x =>
+            {
+                Nodes = nodes.Items.ToArray();
+                StateHasChanged();
+            });
+    }
+
+    protected async Task ListenToSelection()
+    {
+        var selectedNodes = await editor.GetSelectedNodes();
+        selectedNodes
+            .Connect()
+            .Subscribe(x =>
+            {
+                SelectedNodeIds = selectedNodes.Items.ToArray();
+                StateHasChanged();
+            });
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await base.OnAfterRenderAsync(firstRender);
+
+        if (firstRender)
+        {
+            editor
+                .WhenLoaded
+                .Subscribe(_ => HandleLoaded());
+        }
+    }
+
+    private async Task HandleLoaded()
+    {
     }
 
 }

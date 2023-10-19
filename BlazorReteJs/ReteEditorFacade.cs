@@ -1,6 +1,7 @@
-﻿using System.Reactive.Subjects;
-using BlazorReteJs.Api;
+﻿using BlazorReteJs.Api;
+using BlazorReteJs.Collections;
 using BlazorReteJs.Scaffolding;
+using DynamicData;
 using Microsoft.JSInterop;
 
 namespace BlazorReteJs;
@@ -8,24 +9,19 @@ namespace BlazorReteJs;
 internal sealed class ReteEditorFacade
 {
     private readonly IJSObjectReference editorRef;
-    private readonly DotNetObjectReference<ReteEditorFacade> dotNetObjectReference;
-    private readonly ISubject<string[]> whenSelectionChanged = new Subject<string[]>();
 
     public ReteEditorFacade(IJSObjectReference jsModule)
     {
-        this.dotNetObjectReference = DotNetObjectReference.Create(this);
-        this.editorRef = jsModule ?? throw new ArgumentNullException(nameof(jsModule));
+        editorRef = jsModule ?? throw new ArgumentNullException(nameof(jsModule));
         BackgroundEnabled = new JsProperty<bool>(editorRef, nameof(BackgroundEnabled));
         ArrangeDirection = new JsProperty<ReteArrangeDirection>(editorRef, nameof(ArrangeDirection));
         ArrangeAlgorithm = new JsProperty<ReteArrangeAlgorithm>(editorRef, nameof(ArrangeAlgorithm));
         Readonly = new JsProperty<bool>(editorRef, nameof(Readonly));
         AutoArrange = new JsProperty<bool>(editorRef, nameof(AutoArrange));
     }
-
+    
     public IJSObjectReference EditorRef => editorRef;
 
-    public IObservable<string[]> WhenSelectionChanged => whenSelectionChanged;
-    
     public JsProperty<bool> BackgroundEnabled { get; }
     
     public JsProperty<ReteArrangeDirection> ArrangeDirection { get; }
@@ -35,7 +31,7 @@ internal sealed class ReteEditorFacade
     public JsProperty<bool> Readonly { get; }
     
     public JsProperty<bool> AutoArrange { get; }
-
+    
     public ValueTask<IJSObjectReference> AddNode(string label, string nodeId = default) 
     {
         return editorRef.InvokeAsync<IJSObjectReference>("addNode", label, nodeId);
@@ -54,6 +50,21 @@ internal sealed class ReteEditorFacade
     public ValueTask<bool> RemoveNode(string nodeId) 
     {
         return editorRef.InvokeAsync<bool>("removeNode", nodeId);
+    }  
+    
+    public ValueTask<IJSObjectReference> GetNodeById(string nodeId) 
+    {
+        return editorRef.InvokeAsync<IJSObjectReference>("getNodeById", nodeId);
+    } 
+    
+    public ValueTask<IJSObjectReference> GetConnectionById(string connectionId) 
+    {
+        return editorRef.InvokeAsync<IJSObjectReference>("getConnectionById", connectionId);
+    } 
+    
+    public ValueTask RemoveSelectedNodes() 
+    {
+        return editorRef.InvokeVoidAsync("removeSelectedNodes");
     }
     
     public ValueTask UpdateNode(string nodeId) 
@@ -69,11 +80,6 @@ internal sealed class ReteEditorFacade
     public ValueTask UpdateControl(string controlId) 
     {
         return editorRef.InvokeVoidAsync("updateControl", controlId);
-    }
-
-    public ValueTask Initialize()
-    {
-        return editorRef.InvokeVoidAsync("setDotnetEventsHandler", dotNetObjectReference);
     }
     
     public ValueTask Clear() 
@@ -99,12 +105,24 @@ internal sealed class ReteEditorFacade
     public ValueTask ZoomAtNodes()
     {
         return editorRef.InvokeVoidAsync("zoomAtNodes");
-    }
-
-    [JSInvokable]
-    public void OnSelectionChanged(string[] nodeIds)
+    } 
+    
+    public async ValueTask<IObservableList<string>> GetNodesCollection()
     {
-        whenSelectionChanged.OnNext(nodeIds);
+        var collection = await editorRef.InvokeAsync<IJSObjectReference>("getNodesCollection");
+        return new RxObservableCollectionFacade<string>(collection);
+    }
+    
+    public async ValueTask<IObservableList<string>> GetConnectionsCollection()
+    {
+        var collection = await editorRef.InvokeAsync<IJSObjectReference>("getConnectionsCollection");
+        return new RxObservableCollectionFacade<string>(collection);
+    }
+    
+    public async ValueTask<IObservableList<string>> GetSelectedNodesCollection()
+    {
+        var collection = await editorRef.InvokeAsync<IJSObjectReference>("getSelectedNodesCollection");
+        return new RxObservableCollectionFacade<string>(collection);
     }
 
     public void Dispose()

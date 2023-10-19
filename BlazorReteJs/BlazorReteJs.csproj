@@ -20,6 +20,8 @@
 
     <ItemGroup>
         <SupportedPlatform Include="browser" />
+        <Watch Include="**\*.ts" />
+        <Watch Include="**\*.tsx" />
     </ItemGroup>
 
     <ItemGroup>
