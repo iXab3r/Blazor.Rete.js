@@ -36,6 +36,20 @@
       <Folder Include="Controllers\" />
     </ItemGroup>
 
+
+
+    <ItemGroup>
+      <Content Update="tsconfig.json">
+        <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+      </Content>
+      <Content Update="package-lock.json">
+        <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+      </Content>
+      <Content Update="package.json">
+        <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+      </Content>
+    </ItemGroup>
+
     <Target Name="NPM Install" AfterTargets="PreBuildEvent">
         <Exec Command="npm install"/>
     </Target>
