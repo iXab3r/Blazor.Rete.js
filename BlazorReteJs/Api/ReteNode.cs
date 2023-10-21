@@ -5,16 +5,15 @@ namespace BlazorReteJs.Api;
 
 public class ReteNode
 {
-    private readonly IJSObjectReference nodeRef;
-
     public ReteNode(string nodeId, IJSRuntime jsRuntime, IJSObjectReference nodeRef)
     {
-        this.nodeRef = nodeRef;
         IsActive = new JsField<bool>(jsRuntime, nodeRef, "isActive");
         IsBusy = new JsField<bool>(jsRuntime, nodeRef, "isBusy");
         IsSelected = new JsField<bool>(jsRuntime, nodeRef, "selected");
-        Id = nodeId;
         Label = new JsField<string>(jsRuntime, nodeRef, "label");
+        Id = nodeId;
+        JsRuntime = jsRuntime;
+        NodeRef = nodeRef;
     }
 
     public JsField<bool> IsSelected { get; }
@@ -25,6 +24,10 @@ public class ReteNode
     
     public string Id { get; }
     
+    public IJSRuntime JsRuntime { get; }
+    
+    public IJSObjectReference NodeRef { get; }
+
     public JsField<string> Label { get; }
 
     public static async Task<ReteNode> FromJsNode(IJSRuntime jsRuntime, IJSObjectReference nodeRef)

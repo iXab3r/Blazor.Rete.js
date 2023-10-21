@@ -9,7 +9,7 @@
     <div class="w-100" style="height: 15%">
         <div class="hstack">
             JavaScript
-            <button class="btn btn-primary" @onclick="@(async () => await editor.JsEditor.AddNode($"JS-{Guid.NewGuid().ToString()}"))">Add Node</button>
+            <button class="btn btn-primary" @onclick="@(async () => await editor.JsEditor.AddNode(GenerateRandomTemplate()))">Add Node</button>
             <button class="btn btn-primary" @onclick="@(async () => await editor.JsEditor.RemoveSelectedNodes())">Remove Nodes</button>
             <button class="btn btn-primary" @onclick="@(async () => await editor.JsEditor.ArrangeNodes(false))">Arrange</button>
             <button class="btn btn-primary" @onclick="@(async () => await editor.JsEditor.ArrangeNodes(true))">Arrange Animated</button>
@@ -18,6 +18,16 @@
             <button class="btn btn-primary" @onclick="@(async () => await editor.JsEditor.Clear())">Clear</button>
             <button class="btn btn-primary" @onclick="@(async () => await editor.JsEditor.BackgroundEnabled.SetValue(true))">BG Enable</button>
             <button class="btn btn-primary" @onclick="@(async () => await editor.JsEditor.BackgroundEnabled.SetValue(false))">BG Disable</button>
+            <button class="btn btn-primary" @onclick="@(async () => await editor.JsEditor.AddDockTemplate(GenerateRandomTemplate()))">Add template</button>
+        </div> 
+        <div class="hstack">
+            <button class="btn btn-primary" @onclick="@(async () => await editor.JsEditor.EditorRef.InvokeVoidAsync("setMaxOutputs", 0))">Outputs: 0</button>
+            <button class="btn btn-primary" @onclick="@(async () => await editor.JsEditor.EditorRef.InvokeVoidAsync("setMaxOutputs", 1))">Outputs: 1</button>
+            <button class="btn btn-primary" @onclick="@(async () => await editor.JsEditor.EditorRef.InvokeVoidAsync("setMaxOutputs", 2))">Outputs: 2</button>
+            
+            <button class="btn btn-primary" @onclick="@(async () => await editor.JsEditor.EditorRef.InvokeVoidAsync("setMaxInputs", 0))">Inputs: 0</button>
+            <button class="btn btn-primary" @onclick="@(async () => await editor.JsEditor.EditorRef.InvokeVoidAsync("setMaxInputs", 1))">Inputs: 1</button>
+            <button class="btn btn-primary" @onclick="@(async () => await editor.JsEditor.EditorRef.InvokeVoidAsync("setMaxInputs", 2))">Inputs: 2</button>
         </div>
         <div>
             Selection:
@@ -72,6 +82,23 @@
     public ReteNode[] Nodes { get; private set; }
 
     public ReteConnection[] Connections { get; private set; }
+
+    public Random Rng { get; } = new Random();
+    
+
+    protected ReteNodeParams GenerateRandomTemplate()
+    {
+        return new ReteNodeParams()
+        {
+            Label =  $"L{Guid.NewGuid().ToString().Substring(0, 8)}",
+            MaxOutputs = Rng.Next(0, 3),
+            MaxInputs = Rng.Next(0, 3),
+            IsActive = Rng.Next(0, 3) switch { 0 => null, 1 => false, 2 => true },
+            IsBusy = Rng.Next(0, 3) switch { 0 => null, 1 => false, 2 => true },
+            LabelPrefix = Rng.Next(0, 2) switch{ 0 => null, 1 => "P-"},
+            LabelSuffix = Rng.Next(0, 2) switch{ 0 => null, 1 => "-S"},
+        };
+    }
 
     protected async Task ListenToConnections()
     {

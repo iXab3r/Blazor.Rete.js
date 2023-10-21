@@ -104,10 +104,15 @@ public partial class BlazorReteEditor
     {
         return await reteEditorFacade.GetSelectedNodesCollection();
     }
-    
-    public async Task UpdateNode(ReteNode node)
+
+    public async Task UpdateNode(ReteNodeParams nodeParams)
     {
-        await reteEditorFacade.UpdateNode(node.Id);
+        await reteEditorFacade.UpdateNode(nodeParams);
+    }
+    
+    public Task UpdateNode(ReteNode node)
+    {
+        return UpdateNode(new ReteNodeParams(){ Id = node.Id});
     }
     
     public async Task UpdateConnection(ReteConnection connection)
@@ -121,6 +126,11 @@ public partial class BlazorReteEditor
         return result;
     }
 
+    public async Task AddDockTemplate(ReteNodeParams nodeParams)
+    {
+        await reteEditorFacade.AddDockTemplate(nodeParams);
+    }
+
     public async Task<ReteConnection> AddConnection(ReteNode source, ReteNode target, string connectionId = default)
     {
         var jsConnection = await reteEditorFacade.AddConnection(source.Id, target.Id, connectionId);
@@ -128,13 +138,20 @@ public partial class BlazorReteEditor
         return csConnection;
     }
 
-    public async Task<ReteNode> AddNode(string label, string nodeId = default)
+    public async Task<ReteNode> GetNode(string nodeId)
     {
-        var jsNode = await reteEditorFacade.AddNode(label, nodeId);
+        var jsNode = await reteEditorFacade.GetNodeById(nodeId);
         var csNode = await ReteNode.FromJsNode(JsRuntime, jsNode);
-        if (!string.IsNullOrEmpty(nodeId) && !string.Equals(csNode.Id, nodeId))
+        return csNode;
+    }
+    
+    public async Task<ReteNode> AddNode(ReteNodeParams nodeParams)
+    {
+        var jsNode = await reteEditorFacade.AddNode(nodeParams);
+        var csNode = await ReteNode.FromJsNode(JsRuntime, jsNode);
+        if (!string.IsNullOrEmpty(nodeParams.Id) && !string.Equals(csNode.Id, nodeParams.Id))
         {
-            throw new ArgumentException($"Failed to create node with Id {nodeId}, result: {csNode}", nameof(nodeId));
+            throw new ArgumentException($"Failed to create node with Id {nodeParams.Id}, result: {csNode}", nameof(nodeParams.Id));
         }
         return csNode;
     }

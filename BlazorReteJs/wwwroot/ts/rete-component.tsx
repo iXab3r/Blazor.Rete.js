@@ -1,7 +1,6 @@
 ﻿import React = require("react");
 import {createEditor} from "./rete-editor-factory";
 import {useRete} from "rete-react-plugin";
-import {Split} from "@geoffcox/react-splitter";
 
 export type ReteComponentProps = {
     id: string;

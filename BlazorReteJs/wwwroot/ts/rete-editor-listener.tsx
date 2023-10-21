@@ -1,7 +1,7 @@
 ﻿import {ClassicPreset, NodeEditor} from "rete";
 import {AreaExtensions, AreaPlugin} from "rete-area-plugin";
 import {ReteNodeScheme, Schemes} from './rete-editor-shared'
-import {AreaExtra} from "./rete-editor-factory";
+import {AreaExtra} from "./rete-editor-shared";
 
 import {Subject, Subscription, Observable, merge, tap} from 'rxjs';
 import {RxObservableCollection} from "./collections/rx-observable-collection";

@@ -1,6 +1,4 @@
-﻿import {Schemes} from './rete-editor-shared'
-import {ReactArea2D} from "rete-react-plugin";
-import {ReteEditorWrapper} from "./rete-editor-wrapper";
+﻿import {ReteEditorWrapper} from "./rete-editor-wrapper";
 import ReteComponent from "./rete-component";
 import {createRoot} from "react-dom/client";
 import * as React from "react";
@@ -8,7 +6,6 @@ import {StrictMode} from "react";
 
 const editors: { [id: string]: ReteEditorWrapper } = {};
 
-export type AreaExtra = ReactArea2D<Schemes>;
 
 // Function to initialize (create + retrieve) the Rete editor
 export async function renderEditor(container: HTMLElement): Promise<ReteEditorWrapper> {

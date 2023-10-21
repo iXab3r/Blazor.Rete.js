@@ -31,15 +31,20 @@ internal sealed class ReteEditorFacade
     public JsProperty<bool> Readonly { get; }
     
     public JsProperty<bool> AutoArrange { get; }
-    
-    public ValueTask<IJSObjectReference> AddNode(string label, string nodeId = default) 
+
+    public ValueTask AddDockTemplate(ReteNodeParams nodeParams)
     {
-        return editorRef.InvokeAsync<IJSObjectReference>("addNode", label, nodeId);
+        return editorRef.InvokeVoidAsync("addDockTemplate", nodeParams);
     }
     
-    public ValueTask<IJSObjectReference> AddConnection(string firstNodeId, string secondNodeId, string connectionId = default) 
+    public ValueTask<IJSObjectReference> AddNode(ReteNodeParams nodeParams) 
     {
-        return editorRef.InvokeAsync<IJSObjectReference>("addConnection", firstNodeId, secondNodeId, connectionId);
+        return editorRef.InvokeAsync<IJSObjectReference>("addNode", nodeParams);
+    }
+    
+    public ValueTask<IJSObjectReference> AddConnection(string sourceNodeId, string targetNodeId, string connectionId = default) 
+    {
+        return editorRef.InvokeAsync<IJSObjectReference>("addConnection", sourceNodeId, targetNodeId, connectionId);
     } 
     
     public ValueTask<bool> RemoveConnection(string connectionId) 
@@ -67,9 +72,9 @@ internal sealed class ReteEditorFacade
         return editorRef.InvokeVoidAsync("removeSelectedNodes");
     }
     
-    public ValueTask UpdateNode(string nodeId) 
+    public ValueTask UpdateNode(ReteNodeParams nodeParams) 
     {
-        return editorRef.InvokeVoidAsync("updateNode", nodeId);
+        return editorRef.InvokeVoidAsync("updateNode", nodeParams);
     }
     
     public ValueTask UpdateConnection(string connectionId) 

@@ -119,9 +119,10 @@ export function ReteCustomNodeComponent<Scheme extends ClassicScheme>(props: Ret
     const selected = props.data.selected || false;
     const isActive = props.data.isActive || false;
     const isBusy = props.data.isBusy || false;
-    const showSockets = props.data.showSockets || true;
-    const {id, label, width, height} = props.data;
-    
+    const showSockets = Object.keys(props.data.inputs).length > 0 || Object.keys(props.data.outputs).length > 0;
+    const {id, label, width} = props.data;
+    const height = showSockets ? props.data.height : props.data.height / 2; 
+
     sortByIndex(inputs);
     sortByIndex(outputs);
     sortByIndex(controls);
@@ -137,7 +138,9 @@ export function ReteCustomNodeComponent<Scheme extends ClassicScheme>(props: Ret
             <div className="glossy"></div>
             {isActive && <div className="glossy-active"></div>}
             <div className="title" data-testid="title">
+                <span dangerouslySetInnerHTML={{ __html: props.data.labelPrefix }}></span>
                 {label}
+                <span dangerouslySetInnerHTML={{ __html: props.data.labelSuffix }}></span>
             </div>
             <div className="d-flex">
                 {/* Inputs */}
@@ -168,6 +171,7 @@ export function ReteCustomNodeComponent<Scheme extends ClassicScheme>(props: Ret
                               />
                             </span>)}
                             </div>))}
+                
                 <div className="flex-grow-1 text-center">
                     {isBusy && <div className="spinner-border text-warning"></div>}
                 </div>

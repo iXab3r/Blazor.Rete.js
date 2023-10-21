@@ -1,18 +1,18 @@
 ﻿import {createRoot} from "react-dom/client";
 import {ClassicPreset, NodeEditor} from "rete";
 import {AreaExtensions, AreaPlugin} from "rete-area-plugin";
-import {ReteNodeScheme, Schemes} from './rete-editor-shared'
+import {AreaExtra, ReteNodeParams, ReteNodeScheme, ReteNodeSchemes, Schemes} from './rete-editor-shared'
 import {ElementSizeWatcher} from "./scaffolding/element-size-watcher";
 
 import {ArrangeAppliers, AutoArrangePlugin, Presets as ArrangePresets} from "rete-auto-arrange-plugin";
 import {ConnectionPlugin, Presets as ConnectionPresets} from "rete-connection-plugin";
 import {Presets, ReactPlugin} from "rete-react-plugin";
-import {AreaExtra} from "./rete-editor-factory";
 import {ReadonlyPlugin} from "rete-readonly-plugin";
 import {DockPlugin} from "rete-dock-plugin";
+import { ContextMenuExtra, ContextMenuPlugin, Presets as ContextMenuPresets } from "rete-context-menu-plugin";
 
 import {Subject, Subscription, Observable} from 'rxjs';
-import {switchMap, throttleTime} from 'rxjs/operators';
+import {switchMap, throttleTime, debounceTime} from 'rxjs/operators';
 
 import {ReteCustomNodeComponent} from "./rete-custom-node-component";
 import {ReteCustomConnectionComponent} from "./rete-custom-connection-component";
@@ -20,6 +20,8 @@ import {verticalDockSetup} from "./rete-dock-component";
 import {ReteEditorListener} from "./rete-editor-listener";
 import {RxObservableCollection} from "./collections/rx-observable-collection";
 import {DotnetObjectReference} from "./scaffolding/dotnet-object-reference";
+import {ReteEditorDockManager} from "./rete-editor-dock-manager";
+
 
 export class ReteEditorWrapper {
     private readonly editor: NodeEditor<Schemes>;
@@ -30,7 +32,8 @@ export class ReteEditorWrapper {
     private readonly arrangePlugin: AutoArrangePlugin<Schemes>;
     private readonly readonlyPlugin: ReadonlyPlugin<Schemes>;
     private readonly dockPlugin: DockPlugin<Schemes>;
-    private readonly selectedNodes: Set<string> = new Set<string>();
+    private readonly contextMenuPlugin: ContextMenuPlugin<Schemes>;
+    private readonly dockManager: ReteEditorDockManager<Schemes>;
     private readonly background: HTMLDivElement = this.prepareBackgroundElement();
     private readonly eventsListener: ReteEditorListener;
     private readonly arrangeRequests: any = new Subject<string>();
@@ -74,36 +77,19 @@ export class ReteEditorWrapper {
             }
         }))
 
+        this.contextMenuPlugin = new ContextMenuPlugin<Schemes>({
+            items: ContextMenuPresets.classic.setup([])
+        });
+        this.areaPlugin.use(this.contextMenuPlugin);
+        this.renderPlugin.addPreset(Presets.contextMenu.setup())
+
         this.eventsListener = new ReteEditorListener(this.editor, this.areaPlugin);
         AreaExtensions.simpleNodesOrder(this.areaPlugin);
 
         this.dockPlugin = new DockPlugin<Schemes>();
         this.dockPlugin.addPreset(verticalDockSetup({ area: this.areaPlugin }));
         this.areaPlugin.use(this.dockPlugin);
-
-        this.dockPlugin.add(() => new ReteNodeScheme("AlwaysFailure"));
-        this.dockPlugin.add(() => new ReteNodeScheme("AlwaysSuccess"));
-        this.dockPlugin.add(() => new ReteNodeScheme("Fallback"));
-        this.dockPlugin.add(() => new ReteNodeScheme("IfThenElse"));
-        this.dockPlugin.add(() => new ReteNodeScheme("Parallel"));
-        this.dockPlugin.add(() => new ReteNodeScheme("Sequence"));
-        this.dockPlugin.add(() => new ReteNodeScheme("Switch2"));
-        this.dockPlugin.add(() => new ReteNodeScheme("Switch3"));
-        this.dockPlugin.add(() => new ReteNodeScheme("Switch4"));
-        this.dockPlugin.add(() => new ReteNodeScheme("Switch5"));
-        this.dockPlugin.add(() => new ReteNodeScheme("Switch6"));
-        this.dockPlugin.add(() => new ReteNodeScheme("WhileDoElse"));
-        this.dockPlugin.add(() => new ReteNodeScheme("Cooldown"));
-        this.dockPlugin.add(() => new ReteNodeScheme("Delay"));
-        this.dockPlugin.add(() => new ReteNodeScheme("ForceFailure"));
-        this.dockPlugin.add(() => new ReteNodeScheme("ForceSuccess"));
-        this.dockPlugin.add(() => new ReteNodeScheme("Inverter"));
-        this.dockPlugin.add(() => new ReteNodeScheme("KeepRunningUntilFailure"));
-        this.dockPlugin.add(() => new ReteNodeScheme("Precondition"));
-        this.dockPlugin.add(() => new ReteNodeScheme("Repeat"));
-        this.dockPlugin.add(() => new ReteNodeScheme("RetryUntilSuccessful"));
-        this.dockPlugin.add(() => new ReteNodeScheme("Timeout"));
-
+        this.dockManager = new ReteEditorDockManager<Schemes>(this.dockPlugin);
 
         this.editorSizeWatcher = new ElementSizeWatcher(container);
         this.editorSizeWatcher.addSizeChangeHandler(async (width, height) => {
@@ -114,7 +100,7 @@ export class ReteEditorWrapper {
 
         this.anchors.add(
             this.arrangeRequests.pipe(
-                throttleTime(500, undefined, {leading: true, trailing: true}),
+                debounceTime(500, undefined),
                 switchMap(reason => {
                     console.info(`Rearranging nodes, reason: ${reason}`);
                     return this.arrangeNodes(true);
@@ -222,9 +208,10 @@ export class ReteEditorWrapper {
 
     public async addConnection(sourceNodeId: string, targetNodeId: string, connectionId: string) {
         console.info(`Adding new connection: ${sourceNodeId} => ${targetNodeId}`)
-        const sourceNode = this.editor.getNode(sourceNodeId);
-        const targetNode = this.editor.getNode(targetNodeId);
-        const connection = new ClassicPreset.Connection(sourceNode, sourceNode.outputSocket.id, targetNode, targetNode.inputSocket.id);
+        const sourceNode = this.getNodeById(sourceNodeId);
+        const targetNode = this.getNodeById(targetNodeId);
+        
+        const connection = new ClassicPreset.Connection(sourceNode, sourceNode.outputKey, targetNode, targetNode.inputKey);
         if (connectionId) {
             connection.id = connectionId;
         }
@@ -256,14 +243,33 @@ export class ReteEditorWrapper {
         }
     }
 
-    public async addNode(label: string, nodeId: string): Promise<ReteNodeScheme> {
-        console.info(`Adding new node, label: ${label}, Id: ${nodeId}`)
+    public async updateNode(nodeParams: ReteNodeParams): Promise<void> {
+        console.info(`Updating node: ${JSON.stringify(nodeParams)}`);
 
-        const node = new ReteNodeScheme(label);
-        if (nodeId) {
-            node.id = nodeId;
+        // Check if id is provided in nodeParams
+        if (!nodeParams.id) {
+            throw new Error("Node ID is not specified in the provided parameters.");
         }
+
+        const node = this.getNodeById(nodeParams.id);
+
+        // Check if node is found
+        if (!node) {
+            throw new Error(`Node with ID ${nodeParams.id} not found.`);
+        }
+
+        node.updateParams(nodeParams);
+        await this.areaPlugin.update('node', nodeParams.id);
+    }
+
+    public async addNode(nodeParams: ReteNodeParams): Promise<ReteNodeScheme> {
+        console.info(`Adding new node: ${JSON.stringify(nodeParams)}`);
+
+        const node = new ReteNodeScheme(nodeParams);
+        
         if (await this.editor.addNode(node)) {
+           
+            console.info(`Added new node: ${JSON.stringify(node)}`);
             if (this._autoArrange) {
                 this.arrangeRequests.next(`Added node ${node.id}`);
             }
@@ -305,15 +311,24 @@ export class ReteEditorWrapper {
     }
 
     public toggleIsActive() {
-        this.editor.getNodes().forEach(x => {
+        this.getNodesForOperation().forEach(x => {
             x.isActive = !x.isActive;
             this.areaPlugin.update('node', x.id);
         });
     }
 
-    public updateNode(id: string) {
-        console.info(`Updating node: ${id}`)
-        this.areaPlugin.update('node', id);
+    public setMaxOutputs(value: number) {
+        this.getNodesForOperation().forEach(x => {
+            x.maxOutputs = value;
+            this.areaPlugin.update('node', x.id);
+        });
+    }
+
+    public setMaxInputs(value: number) {
+        this.getNodesForOperation().forEach(x => {
+            x.maxInputs = value;
+            this.areaPlugin.update('node', x.id);
+        });
     }
 
     public updateConnection(id: string) {
@@ -377,10 +392,26 @@ export class ReteEditorWrapper {
             });
     }
 
+    public addDockTemplate(nodeParams: ReteNodeParams): void {
+        if (nodeParams.id !== undefined && nodeParams.id !== null) {
+            throw new Error("The 'id' property of nodeParams should be undefined or null.");
+        }
+        this.dockManager.addTemplate(nodeParams);
+    }
+
     public destroy() {
         this.anchors.unsubscribe();
         this.areaPlugin?.destroy();
         this.editorSizeWatcher?.destroy()
+    }
+    
+    private getNodesForOperation(){
+        let selectedNodes = this.getSelectedNodes();
+        if (selectedNodes.length <= 0){
+            return this.getNodes();
+        } else{
+            return selectedNodes;
+        }
     }
 
     private prepareBackgroundElement() {
@@ -391,6 +422,4 @@ export class ReteEditorWrapper {
 
         return background;
     }
-    
-    
 }
