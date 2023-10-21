@@ -32,6 +32,10 @@
 
 
 
+    <ItemGroup>
+      <Folder Include="Controllers\" />
+    </ItemGroup>
+
     <Target Name="NPM Install" AfterTargets="PreBuildEvent">
         <Exec Command="npm install"/>
     </Target>
