@@ -1,7 +1,7 @@
 ﻿import {createRoot} from "react-dom/client";
 import {ClassicPreset, NodeEditor} from "rete";
 import {AreaExtensions, AreaPlugin} from "rete-area-plugin";
-import {AreaExtra, ReteNodeParams, ReteNodeScheme, ReteNodeSchemes, Schemes} from './rete-editor-shared'
+import {AreaExtra, ReteNodeParams, ReteNodeScheme, ReteNodeSchemes, ReteNodeStatus, Schemes} from './rete-editor-shared'
 import {ElementSizeWatcher} from "./scaffolding/element-size-watcher";
 
 import {ArrangeAppliers, AutoArrangePlugin, Presets as ArrangePresets} from "rete-auto-arrange-plugin";
@@ -21,6 +21,7 @@ import {ReteEditorListener} from "./rete-editor-listener";
 import {RxObservableCollection} from "./collections/rx-observable-collection";
 import {DotnetObjectReference} from "./scaffolding/dotnet-object-reference";
 import {ReteEditorDockManager} from "./rete-editor-dock-manager";
+import {ReteCustomSocketComponent} from "./rete-custom-socket-component";
 
 
 export class ReteEditorWrapper {
@@ -42,6 +43,7 @@ export class ReteEditorWrapper {
     private _backgroundEnabled: boolean = false;
     private _arrangeDirection: string = undefined;
     private _arrangeAlgorithm: string = undefined;
+    private _arrangeAnimate: boolean = false;
     private _readonly: boolean = false;
     private _autoArrange: boolean = false;
 
@@ -73,7 +75,10 @@ export class ReteEditorWrapper {
                 },
                 connection(context) {
                     return ReteCustomConnectionComponent;
-                }
+                },
+                socket(context) {
+                    return ReteCustomSocketComponent;
+                },
             }
         }))
 
@@ -103,7 +108,7 @@ export class ReteEditorWrapper {
                 debounceTime(500, undefined),
                 switchMap(reason => {
                     console.info(`Rearranging nodes, reason: ${reason}`);
-                    return this.arrangeNodes(true);
+                    return this.arrangeNodes();
                 })
             ).subscribe())
     }
@@ -134,6 +139,23 @@ export class ReteEditorWrapper {
 
         if (this._autoArrange) {
             this.arrangeRequests.next(`Enabled auto-arrange`);
+        }
+    }
+    
+    public getArrangeAnimate(): boolean {
+        return this._arrangeAnimate;
+    }
+
+    public setArrangeAnimate(value: boolean) {
+        if (value === this._arrangeAnimate) {
+            return;
+        }
+
+        console.info(`Setting ArrangeAnimate: ${this._arrangeAnimate} => ${value}`);
+        this._arrangeAnimate = value;
+
+        if (this._arrangeAnimate) {
+            this.arrangeRequests.next(`Enabled ArrangeAnimate`);
         }
     }
 
@@ -252,8 +274,6 @@ export class ReteEditorWrapper {
         }
 
         const node = this.getNodeById(nodeParams.id);
-
-        // Check if node is found
         if (!node) {
             throw new Error(`Node with ID ${nodeParams.id} not found.`);
         }
@@ -264,6 +284,15 @@ export class ReteEditorWrapper {
 
     public async addNode(nodeParams: ReteNodeParams): Promise<ReteNodeScheme> {
         console.info(`Adding new node: ${JSON.stringify(nodeParams)}`);
+
+        if (nodeParams.id) {
+            const existingNode = this.getNodeById(nodeParams.id);
+            
+            if (existingNode){
+                console.warn(`Failed to add node with ID ${nodeParams.id} - it already exists: ${JSON.stringify(existingNode)}`);
+                throw new Error(`Node with ID ${nodeParams.id} already exists`);
+            }
+        }
 
         const node = new ReteNodeScheme(nodeParams);
         
@@ -312,7 +341,11 @@ export class ReteEditorWrapper {
 
     public toggleIsActive() {
         this.getNodesForOperation().forEach(x => {
-            x.isActive = !x.isActive;
+            if (x.status === ReteNodeStatus.None){
+                x.status = ReteNodeStatus.Success;
+            } else{
+                x.status = ReteNodeStatus.None;
+            }
             this.areaPlugin.update('node', x.id);
         });
     }
@@ -364,10 +397,10 @@ export class ReteEditorWrapper {
         AreaExtensions.zoomAt(this.areaPlugin, this.editor.getNodes());
     }
 
-    public async arrangeNodes(animate: boolean) {
+    public async arrangeNodes() {
         const area = this.areaPlugin;
         const editor = this.editor;
-        const applier = new ArrangeAppliers.TransitionApplier<Schemes, never>({
+        const animatedApplied = new ArrangeAppliers.TransitionApplier<Schemes, never>({
             duration: 500,
             timingFunction: (t) => t,
             async onTick() {
@@ -387,7 +420,7 @@ export class ReteEditorWrapper {
 
         await this.arrangePlugin.layout(
             {
-                applier: animate ? applier : undefined,
+                applier: this._arrangeAnimate ? animatedApplied : undefined,
                 options: elkOptions
             });
     }

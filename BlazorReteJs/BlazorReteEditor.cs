@@ -33,6 +33,8 @@ public partial class BlazorReteEditor
     public JsProperty<bool> Readonly => reteEditorFacade.Readonly;
 
     public JsProperty<bool> AutoArrange => reteEditorFacade.AutoArrange;
+    
+    public JsProperty<bool> ArrangeAnimate => reteEditorFacade.ArrangeAnimate;
 
     protected override async Task OnInitializedAsync()
     {
@@ -161,9 +163,9 @@ public partial class BlazorReteEditor
         await reteEditorFacade.Clear();
     }
     
-    public async Task ArrangeNodes(bool animate = false)
+    public async Task ArrangeNodes()
     {
-        await reteEditorFacade.ArrangeNodes(animate);
+        await reteEditorFacade.ArrangeNodes();
     }
     
     public async Task ZoomAtNodes()

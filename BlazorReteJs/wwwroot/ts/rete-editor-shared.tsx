@@ -2,8 +2,16 @@
 import {ClassicScheme, Presets, RenderEmit} from "rete-react-plugin";
 import {ReactArea2D} from "rete-react-plugin";
 import { ContextMenuExtra } from "rete-context-menu-plugin";
+import {$nodeheight, $nodewidth, $socketmargin, $socketsize} from "./vars";
 
 const reteSocket = new ClassicPreset.Socket("socket");
+
+export enum ReteNodeStatus {
+    None,
+    Success,
+    Danger,
+    Warning,
+}
 
 export interface ReteNodeParams {
     label: string;
@@ -12,18 +20,20 @@ export interface ReteNodeParams {
     id?: string;
     maxInputs?: number;
     maxOutputs?: number;
-    isActive?: boolean;
+    status?: ReteNodeStatus;
     isBusy?: boolean;
+    body?: string;
 }
 
 export class ReteNodeScheme extends ClassicPreset.Node {
     
-    width: number = 180;
-    height: number = 90;
-    isActive: boolean;
+    width: number = $nodewidth;
+    height: number = $nodeheight;
+    status: ReteNodeStatus;
     isBusy: boolean;
     labelSuffix: string;
     labelPrefix: string;
+    body: string;
     
     private readonly _inputSocket: ClassicPreset.Input<ClassicPreset.Socket>;
     private readonly _outputSocket: ClassicPreset.Output<ClassicPreset.Socket>;
@@ -88,10 +98,29 @@ export class ReteNodeScheme extends ClassicPreset.Node {
         return this._outputSocket;
     }
 
+    public getParams(): ReteNodeParams {
+        return {
+            id: this.id,
+            label: this.label,
+            labelPrefix: this.labelPrefix,
+            labelSuffix: this.labelSuffix,
+            status: this.status,
+            isBusy: this.isBusy,
+            body: this.body,
+            maxInputs: this._maxInputs,
+            maxOutputs: this._maxOutputs,
+        };
+    }
+    
     public updateParams(nodeParams: ReteNodeParams): boolean {
         let changedPropertiesCount = 0;
         if (nodeParams.id !== null && nodeParams.id !== undefined && this.id !== nodeParams.id) {
             this.id = nodeParams.id;
+            changedPropertiesCount++;
+        }
+
+        if (nodeParams.body !== null && nodeParams.body !== undefined && this.body !== nodeParams.body) {
+            this.body = nodeParams.body;
             changedPropertiesCount++;
         }
 
@@ -115,8 +144,8 @@ export class ReteNodeScheme extends ClassicPreset.Node {
             changedPropertiesCount++;
         }
 
-        if (nodeParams.isActive !== null && nodeParams.isActive !== undefined && this.isActive !== nodeParams.isActive) {
-            this.isActive = nodeParams.isActive;
+        if (nodeParams.status !== null && nodeParams.status !== undefined && this.status !== nodeParams.status) {
+            this.status = nodeParams.status;
             changedPropertiesCount++;
         }
 
@@ -139,10 +168,11 @@ export type NodeExtraData = {
     width?: number; 
     height?: number;
     isBusy: boolean;
-    labelSuffix: string;
-    labelPrefix: string;
-    isActive: boolean;
+    body?: string;
+    labelSuffix?: string;
+    labelPrefix?: string;
     selected: boolean;
+    status: ReteNodeStatus;
 };
 
 export type ConnectionExtraData = { 

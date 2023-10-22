@@ -17,6 +17,7 @@ internal sealed class ReteEditorFacade
         ArrangeDirection = new JsProperty<ReteArrangeDirection>(editorRef, nameof(ArrangeDirection));
         ArrangeAlgorithm = new JsProperty<ReteArrangeAlgorithm>(editorRef, nameof(ArrangeAlgorithm));
         Readonly = new JsProperty<bool>(editorRef, nameof(Readonly));
+        ArrangeAnimate = new JsProperty<bool>(editorRef, nameof(ArrangeAnimate));
         AutoArrange = new JsProperty<bool>(editorRef, nameof(AutoArrange));
     }
     
@@ -28,9 +29,11 @@ internal sealed class ReteEditorFacade
     
     public JsProperty<ReteArrangeAlgorithm> ArrangeAlgorithm { get; }
     
-    public JsProperty<bool> Readonly { get; }
-    
     public JsProperty<bool> AutoArrange { get; }
+    
+    public JsProperty<bool> ArrangeAnimate { get; }
+    
+    public JsProperty<bool> Readonly { get; }
 
     public ValueTask AddDockTemplate(ReteNodeParams nodeParams)
     {
@@ -102,9 +105,9 @@ internal sealed class ReteEditorFacade
         return editorRef.InvokeVoidAsync("orderNodes");
     } 
     
-    public ValueTask ArrangeNodes(bool animate)
+    public ValueTask ArrangeNodes()
     {
-        return editorRef.InvokeVoidAsync("arrangeNodes", animate);
+        return editorRef.InvokeVoidAsync("arrangeNodes");
     }
     
     public ValueTask ZoomAtNodes()

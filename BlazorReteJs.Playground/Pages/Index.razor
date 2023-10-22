@@ -11,8 +11,7 @@
             JavaScript
             <button class="btn btn-primary" @onclick="@(async () => await editor.JsEditor.AddNode(GenerateRandomTemplate()))">Add Node</button>
             <button class="btn btn-primary" @onclick="@(async () => await editor.JsEditor.RemoveSelectedNodes())">Remove Nodes</button>
-            <button class="btn btn-primary" @onclick="@(async () => await editor.JsEditor.ArrangeNodes(false))">Arrange</button>
-            <button class="btn btn-primary" @onclick="@(async () => await editor.JsEditor.ArrangeNodes(true))">Arrange Animated</button>
+            <button class="btn btn-primary" @onclick="@(async () => await editor.JsEditor.ArrangeNodes())">Arrange</button>
             <button class="btn btn-primary" @onclick="@(async () => await editor.JsEditor.ZoomAtNodes())">ZoomAt Nodes</button>
             <button class="btn btn-primary" @onclick="@(async () => await editor.JsEditor.EditorRef.InvokeVoidAsync("toggleIsActive"))">Toggle IsActive</button>
             <button class="btn btn-primary" @onclick="@(async () => await editor.JsEditor.Clear())">Clear</button>

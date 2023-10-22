@@ -2,7 +2,7 @@ import * as React from "react";
 import {ClassicScheme, Presets} from "rete-react-plugin";
 import styled, {css} from "styled-components";
 import {$nodewidth, $socketmargin, $socketsize} from "./vars";
-import {NodeExtraData, ReteCustomNodeProps} from "./rete-editor-shared";
+import {NodeExtraData, ReteCustomNodeProps, ReteNodeStatus} from "./rete-editor-shared";
 import {sortByIndex} from "./scaffolding/utils";
 
 const {RefSocket, RefControl} = Presets.classic;
@@ -52,20 +52,39 @@ export const NodeStyles = styled.div<NodeExtraData & { styles?: (props: any) => 
     z-index: -1;
   }
 
-  ${(props) =>
-          props.isActive &&
-          css`
-            .glossy-active {
-              position: absolute;
-              top: 0;
-              left: 0;
-              right: 0;
-              bottom: 0;
-              background: radial-gradient(circle 70px at center, rgba(0, 255, 0, 1), transparent); /* Adjust circle size here */
-              box-shadow: 0 0 8px 4px rgba(0, 255, 0, 0.5); /* Adjust glow effect here */
-              z-index: -1;
-            }
-          `}
+  .glossy-success {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: radial-gradient(circle 70px at center, rgba(0, 255, 0, 1), transparent);
+    box-shadow: 0 0 8px 4px rgba(0, 255, 0, 0.5);
+    z-index: -1;
+  }
+
+  .glossy-danger {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: radial-gradient(circle 70px at center, rgba(255, 0, 0, 1), transparent);
+    box-shadow: 0 0 8px 4px rgba(255, 0, 0, 0.5);
+    z-index: -1;
+  }
+
+  .glossy-warning {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: radial-gradient(circle 70px at center, rgba(255, 255, 0, 1), transparent);
+    box-shadow: 0 0 8px 4px rgba(255, 255, 0, 0.5);
+    z-index: -1;
+  }
+
   .output {
     text-align: right;
   }
@@ -109,6 +128,12 @@ export const NodeStyles = styled.div<NodeExtraData & { styles?: (props: any) => 
     padding: ${$socketmargin}px ${$socketsize / 2 + $socketmargin}px;
   }
 
+  .centered-content {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
   ${(props) => props.styles && props.styles(props)}
 `;
 
@@ -117,11 +142,10 @@ export function ReteCustomNodeComponent<Scheme extends ClassicScheme>(props: Ret
     const outputs = Object.entries(props.data.outputs);
     const controls = Object.entries(props.data.controls);
     const selected = props.data.selected || false;
-    const isActive = props.data.isActive || false;
     const isBusy = props.data.isBusy || false;
     const showSockets = Object.keys(props.data.inputs).length > 0 || Object.keys(props.data.outputs).length > 0;
     const {id, label, width} = props.data;
-    const height = showSockets ? props.data.height : props.data.height / 2; 
+    const height = showSockets ? props.data.height : props.data.height / 2;
 
     sortByIndex(inputs);
     sortByIndex(outputs);
@@ -132,15 +156,26 @@ export function ReteCustomNodeComponent<Scheme extends ClassicScheme>(props: Ret
             selected={selected}
             width={width}
             height={height}
-            isActive={isActive}
             styles={props.styles}
             data-testid="node">
             <div className="glossy"></div>
-            {isActive && <div className="glossy-active"></div>}
-            <div className="title" data-testid="title">
-                <span dangerouslySetInnerHTML={{ __html: props.data.labelPrefix }}></span>
-                {label}
-                <span dangerouslySetInnerHTML={{ __html: props.data.labelSuffix }}></span>
+            {props.data.status == ReteNodeStatus.Success && <div className="glossy-success"></div>}
+            {props.data.status == ReteNodeStatus.Danger && <div className="glossy-danger"></div>}
+            {props.data.status == ReteNodeStatus.Warning && <div className="glossy-warning"></div>}
+            <div className="d-flex title" data-testid="title">
+                <div className="flex-shrink-0">
+                    <span dangerouslySetInnerHTML={{__html: props.data.labelPrefix}}></span>
+                </div>
+
+                <div className="flex-grow-1 text-center">
+                    <span className="centered-content">
+                                {label}
+                    </span>
+                </div>
+
+                <div className="flex-shrink-0">
+                    <span dangerouslySetInnerHTML={{__html: props.data.labelSuffix}}></span>
+                </div>
             </div>
             <div className="d-flex">
                 {/* Inputs */}
@@ -156,24 +191,11 @@ export function ReteCustomNodeComponent<Scheme extends ClassicScheme>(props: Ret
                                     nodeId={id}
                                     payload={input.socket}
                                 />
-                                {input && (!input.control || !input.showControl) && (
-                                    <div className="input-title" data-testid="input-title">
-                                        {input?.label}
-                                    </div>
-                                )}
-                                {input?.control && input?.showControl && (
-                                    <span className="input-control">
-                              <RefControl
-                                  key={key}
-                                  name="input-control"
-                                  emit={props.emit}
-                                  payload={input.control}
-                              />
-                            </span>)}
                             </div>))}
-                
-                <div className="flex-grow-1 text-center">
+
+                <div className="flex-grow-1 text-center align-self-center">
                     {isBusy && <div className="spinner-border text-warning"></div>}
+                    {props.data.body && <span dangerouslySetInnerHTML={{__html: props.data.body}}></span>}
                 </div>
 
                 {/* Outputs */}
@@ -181,9 +203,6 @@ export function ReteCustomNodeComponent<Scheme extends ClassicScheme>(props: Ret
                     ([key, output]) =>
                         output && (
                             <div className="output" key={key} data-testid={`output-${key}`}>
-                                <div className="output-title" data-testid="output-title">
-                                    {output?.label}
-                                </div>
                                 <RefSocket
                                     name="output-socket"
                                     side="output"

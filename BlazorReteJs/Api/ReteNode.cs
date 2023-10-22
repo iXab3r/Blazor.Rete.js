@@ -7,7 +7,6 @@ public class ReteNode
 {
     public ReteNode(string nodeId, IJSRuntime jsRuntime, IJSObjectReference nodeRef)
     {
-        IsActive = new JsField<bool>(jsRuntime, nodeRef, "isActive");
         IsBusy = new JsField<bool>(jsRuntime, nodeRef, "isBusy");
         IsSelected = new JsField<bool>(jsRuntime, nodeRef, "selected");
         Label = new JsField<string>(jsRuntime, nodeRef, "label");
@@ -17,8 +16,6 @@ public class ReteNode
     }
 
     public JsField<bool> IsSelected { get; }
-    
-    public JsField<bool> IsActive { get; }
     
     public JsField<bool> IsBusy { get; }
     
@@ -30,12 +27,21 @@ public class ReteNode
 
     public JsField<string> Label { get; }
 
+    public async Task<ReteNodeParams> GetParams()
+    {
+        return await NodeRef.InvokeAsync<ReteNodeParams>("getParams");
+    }
+    
+    public async Task<bool> UpdateParams(ReteNodeParams nodeParams)
+    {
+        return await NodeRef.InvokeAsync<bool>("updateParams", nodeParams);
+    }
+
     public static async Task<ReteNode> FromJsNode(IJSRuntime jsRuntime, IJSObjectReference nodeRef)
     {
         var id = await nodeRef.GetObjectFieldAsync<string>(jsRuntime, "id");
         var result = new ReteNode(id, jsRuntime, nodeRef);
         await result.IsSelected.GetValue();
-        await result.IsActive.GetValue();
         await result.Label.GetValue();
         await result.IsBusy.GetValue();
         return result;
@@ -43,6 +49,6 @@ public class ReteNode
 
     public override string ToString()
     {
-        return new { Id, Label = Label.Value, IsSelected = IsSelected.Value, IsActive = IsActive.Value }.ToString();
+        return new { Id, Label = Label.Value, IsSelected = IsSelected.Value }.ToString();
     }
 }
