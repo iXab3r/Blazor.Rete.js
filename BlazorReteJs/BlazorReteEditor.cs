@@ -1,6 +1,8 @@
 ﻿using System.Reactive;
+using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using BlazorReteJs.Api;
+using BlazorReteJs.Collections;
 using BlazorReteJs.Scaffolding;
 using DynamicData;
 using Microsoft.AspNetCore.Components;
@@ -35,6 +37,20 @@ public partial class BlazorReteEditor
     public JsProperty<bool> AutoArrange => reteEditorFacade.AutoArrange;
     
     public JsProperty<bool> ArrangeAnimate => reteEditorFacade.ArrangeAnimate;
+
+    public IObservable<ReteNodePosition[]> NodePositionUpdates { get; }
+
+    public BlazorReteEditor()
+    {
+        NodePositionUpdates = WhenLoaded
+            .SelectMany(async _ =>
+            {
+                var observableReference = await reteEditorFacade!.GetNodePositionUpdatesObservable(bufferTime: TimeSpan.FromMilliseconds(250), includeTranslated: true);
+                var listener = JsObservableListenerFacade<ReteNodePosition[]>.CreateObservable(JsRuntime, observableReference);
+                return listener; 
+            })
+            .Switch();
+    }
 
     protected override async Task OnInitializedAsync()
     {

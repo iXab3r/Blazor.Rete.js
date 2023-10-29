@@ -14,7 +14,7 @@ public sealed class RxObservableCollectionFacade<T> : IObservableList<T>
     public RxObservableCollectionFacade(IJSObjectReference collectionReference)
     {
         this.collectionReference = collectionReference;
-        var listener = ObservableListenerFacade<JsChange<T>>.Create(collectionReference, "listenDotnet");
+        var listener = JsObservableListenerFacade<JsChange<T>>.CreateObservableUsingFactoryMethod(collectionReference, "listenDotnet");
         itemsSource = listener
             .Select(x => x.ToChange())
             .Select(x => new ChangeSet<T>(new[] {x}))

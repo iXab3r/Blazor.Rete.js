@@ -9,6 +9,8 @@ public readonly record struct ReteNodeParams
     public string Id { get; init; }
     public int? MaxInputs { get; init; }
     public int? MaxOutputs { get; init; }
+    public float? X { get; init; }
+    public float? Y { get; init; }
     public ReteNodeStatus? Status { get; init; }
     public bool? IsBusy { get; init; }
 }

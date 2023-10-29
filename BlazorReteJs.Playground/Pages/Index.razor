@@ -18,6 +18,15 @@
             <button class="btn btn-primary" @onclick="@(async () => await editor.JsEditor.BackgroundEnabled.SetValue(true))">BG Enable</button>
             <button class="btn btn-primary" @onclick="@(async () => await editor.JsEditor.BackgroundEnabled.SetValue(false))">BG Disable</button>
             <button class="btn btn-primary" @onclick="@(async () => await editor.JsEditor.AddDockTemplate(GenerateRandomTemplate()))">Add template</button>
+            <button class="btn btn-primary" @onclick="@(GC.Collect)">GC Collect</button>
+            @if (NodePositionUpdatesAnchor == null)
+            {
+                <button class="btn btn-primary" @onclick="@(async () => await ListenToNodeUpdates())">Listen to node updates</button>
+            }
+            else
+            {
+                <button class="btn btn-primary" @onclick="@(async () => await UnsubscribeFromNodeUpdates())">Unsub from node updates</button>
+            }
         </div> 
         <div class="hstack">
             <button class="btn btn-primary" @onclick="@(async () => await editor.JsEditor.EditorRef.InvokeVoidAsync("setMaxOutputs", 0))">Outputs: 0</button>
@@ -84,7 +93,8 @@
 
     public Random Rng { get; } = new Random();
     
-
+    public IDisposable? NodePositionUpdatesAnchor { get; private set; }
+    
     protected ReteNodeParams GenerateRandomTemplate()
     {
         return new ReteNodeParams()
@@ -92,13 +102,37 @@
             Label =  $"L{Guid.NewGuid().ToString().Substring(0, 8)}",
             MaxOutputs = Rng.Next(0, 3),
             MaxInputs = Rng.Next(0, 3),
-            IsActive = Rng.Next(0, 3) switch { 0 => null, 1 => false, 2 => true },
             IsBusy = Rng.Next(0, 3) switch { 0 => null, 1 => false, 2 => true },
             LabelPrefix = Rng.Next(0, 2) switch{ 0 => null, 1 => "P-"},
             LabelSuffix = Rng.Next(0, 2) switch{ 0 => null, 1 => "-S"},
         };
     }
 
+    protected async Task UnsubscribeFromNodeUpdates()
+    {
+        if (NodePositionUpdatesAnchor == null)
+        {
+            throw new InvalidOperationException();
+        }
+        NodePositionUpdatesAnchor?.Dispose();
+        NodePositionUpdatesAnchor = null;
+    }
+
+    protected async Task ListenToNodeUpdates()
+    {
+        if (NodePositionUpdatesAnchor != null)
+        {
+            throw new InvalidOperationException();
+        }
+        NodePositionUpdatesAnchor = editor
+            .NodePositionUpdates
+            .Subscribe(x =>
+            {
+                Console.WriteLine($"Node position update received({x.Length}): {string.Join(",", x)}");
+                InvokeAsync(StateHasChanged);
+            });
+    }
+    
     protected async Task ListenToConnections()
     {
         var connections = await editor.GetConnectionsCache();
@@ -108,7 +142,7 @@
             .Subscribe(x =>
             {
                 Connections = connections.Items.ToArray();
-                StateHasChanged();
+                InvokeAsync(StateHasChanged);
             });
     }
 
@@ -121,7 +155,7 @@
             .Subscribe(x =>
             {
                 Nodes = nodes.Items.ToArray();
-                StateHasChanged();
+                InvokeAsync(StateHasChanged);
             });
     }
 
@@ -134,7 +168,7 @@
             .Subscribe(x =>
             {
                 SelectedNodeIds = selectedNodes.Items.ToArray();
-                StateHasChanged();
+                InvokeAsync(StateHasChanged);
             });
     }
 

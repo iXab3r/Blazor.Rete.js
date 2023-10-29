@@ -13,16 +13,24 @@ export enum ReteNodeStatus {
     Warning,
 }
 
+export interface ReteNodePosition {
+    id?: string;
+    x?: number;
+    y?: number;
+}
+
 export interface ReteNodeParams {
-    label: string;
-    labelPrefix: string;
-    labelSuffix: string;
+    label?: string;
+    labelPrefix?: string;
+    labelSuffix?: string;
     id?: string;
     maxInputs?: number;
     maxOutputs?: number;
     status?: ReteNodeStatus;
     isBusy?: boolean;
     body?: string;
+    x?: number;
+    y?: number;
 }
 
 export class ReteNodeScheme extends ClassicPreset.Node {

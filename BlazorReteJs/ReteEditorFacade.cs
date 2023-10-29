@@ -1,4 +1,5 @@
-﻿using BlazorReteJs.Api;
+﻿using System.Reactive.Linq;
+using BlazorReteJs.Api;
 using BlazorReteJs.Collections;
 using BlazorReteJs.Scaffolding;
 using DynamicData;
@@ -34,7 +35,7 @@ internal sealed class ReteEditorFacade
     public JsProperty<bool> ArrangeAnimate { get; }
     
     public JsProperty<bool> Readonly { get; }
-
+    
     public ValueTask AddDockTemplate(ReteNodeParams nodeParams)
     {
         return editorRef.InvokeVoidAsync("addDockTemplate", nodeParams);
@@ -113,7 +114,13 @@ internal sealed class ReteEditorFacade
     public ValueTask ZoomAtNodes()
     {
         return editorRef.InvokeVoidAsync("zoomAtNodes");
-    } 
+    }
+
+    public async ValueTask<IJSObjectReference> GetNodePositionUpdatesObservable(TimeSpan? bufferTime = default, bool? includeTranslated = default)
+    {
+        var observableReference = await editorRef.InvokeAsync<IJSObjectReference>("getNodePositionUpdatesObservable", bufferTime?.TotalMilliseconds, includeTranslated);
+        return observableReference;
+    }
     
     public async ValueTask<IObservableList<string>> GetNodesCollection()
     {
@@ -131,8 +138,8 @@ internal sealed class ReteEditorFacade
     {
         var collection = await editorRef.InvokeAsync<IJSObjectReference>("getSelectedNodesCollection");
         return new RxObservableCollectionFacade<string>(collection);
-    }
-
+    } 
+    
     public void Dispose()
     {
         editorRef.DisposeAsync();

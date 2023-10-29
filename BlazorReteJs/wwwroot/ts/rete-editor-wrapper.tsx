@@ -1,7 +1,15 @@
 ﻿import {createRoot} from "react-dom/client";
 import {ClassicPreset, NodeEditor} from "rete";
 import {AreaExtensions, AreaPlugin} from "rete-area-plugin";
-import {AreaExtra, ReteNodeParams, ReteNodeScheme, ReteNodeSchemes, ReteNodeStatus, Schemes} from './rete-editor-shared'
+import {
+    AreaExtra,
+    ReteNodeParams,
+    ReteNodePosition,
+    ReteNodeScheme,
+    ReteNodeSchemes,
+    ReteNodeStatus,
+    Schemes
+} from './rete-editor-shared'
 import {ElementSizeWatcher} from "./scaffolding/element-size-watcher";
 
 import {ArrangeAppliers, AutoArrangePlugin, Presets as ArrangePresets} from "rete-auto-arrange-plugin";
@@ -37,7 +45,7 @@ export class ReteEditorWrapper {
     private readonly dockManager: ReteEditorDockManager<Schemes>;
     private readonly background: HTMLDivElement = this.prepareBackgroundElement();
     private readonly eventsListener: ReteEditorListener;
-    private readonly arrangeRequests: any = new Subject<string>();
+    private readonly arrangeRequests: Subject<string> = new Subject<string>();
     private readonly anchors: Subscription = new Subscription();
 
     private _backgroundEnabled: boolean = false;
@@ -123,6 +131,10 @@ export class ReteEditorWrapper {
     
     public getConnectionsCollection(): RxObservableCollection<string>{
         return this.eventsListener.getConnections();
+    }
+
+    public getNodePositionUpdatesObservable(bufferTimeInMs?: number, includeTranslated?: boolean): Observable<ReteNodePosition[]> {
+        return this.eventsListener.getNodePositionUpdates(bufferTimeInMs, includeTranslated);
     }
     
     public getAutoArrange(): boolean {

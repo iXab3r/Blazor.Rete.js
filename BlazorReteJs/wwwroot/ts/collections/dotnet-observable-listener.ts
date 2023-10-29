@@ -24,7 +24,7 @@ export class DotnetObservableListener<T> {
     }
 
     // Dispose method to allow the listener to be cleaned up
-    dispose() {
+    dispose(): void {
         this.anchors.unsubscribe();
         this.logger.debug('DotnetObservableListener has been disposed and unsubscribed from the observable.');
     }
