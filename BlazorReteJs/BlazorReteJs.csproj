@@ -5,6 +5,7 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <RazorLangVersion>3.0</RazorLangVersion>
         <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+        <EnableDefaultStaticWebAssets>true</EnableDefaultStaticWebAssets>
     </PropertyGroup>
 
     <ItemGroup>
