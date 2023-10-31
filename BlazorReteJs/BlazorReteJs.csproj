@@ -5,39 +5,31 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <RazorLangVersion>3.0</RazorLangVersion>
         <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
-        <EnableDefaultStaticWebAssets>true</EnableDefaultStaticWebAssets>
+        <EnableDefaultContentItems>true<!-- Important for Blazor Scoped CSS --></EnableDefaultContentItems>
+        <ResolveCurrentProjectStaticWebAssetsInputsDependsOn>
+            NPM Index1;
+            $(ResolveCurrentProjectStaticWebAssetsInputsDependsOn)
+        </ResolveCurrentProjectStaticWebAssetsInputsDependsOn>
     </PropertyGroup>
 
     <ItemGroup>
         <PackageReference Include="DynamicData" Version="8.0.2"/>
+        <PackageReference Include="Microsoft.TypeScript.MSBuild" Version="5.2.2">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
         <PackageReference Include="Macross.Json.Extensions" Version="3.0.0"/>
         <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="7.0.0"/>
         <PackageReference Include="Microsoft.AspNetCore.Components" Version="7.0.0"/>
         <PackageReference Include="PropertyChanged.Fody" Version="3.4.0" PrivateAssets='All'/>
         <PackageReference Include="ReactiveUI" Version="18.0.10"/>
-        <PackageReference Include="System.Linq.Async" Version="6.0.1" />
+        <PackageReference Include="System.Linq.Async" Version="6.0.1"/>
     </ItemGroup>
-
 
     <ItemGroup>
         <SupportedPlatform Include="browser"/>
         <Watch Include="**\*.ts"/>
         <Watch Include="**\*.tsx"/>
-    </ItemGroup>
-
-    <ItemGroup>
-        <Compile Update="BlazorReteEditor.cs">
-            <DependentUpon>BlazorReteEditor.razor</DependentUpon>
-        </Compile>
-    </ItemGroup>
-
-
-    <ItemGroup>
-        <Folder Include="Controllers\"/>
-    </ItemGroup>
-
-
-    <ItemGroup>
         <Content Update="tsconfig.json">
             <CopyToOutputDirectory>Never</CopyToOutputDirectory>
             <CopyToPublishDirectory>Never</CopyToPublishDirectory>
@@ -50,6 +42,58 @@
             <CopyToOutputDirectory>Never</CopyToOutputDirectory>
             <CopyToPublishDirectory>Never</CopyToPublishDirectory>
         </Content>
+    </ItemGroup>
+
+    <ItemGroup>
+        <Compile Update="BlazorReteEditor.cs">
+            <DependentUpon>BlazorReteEditor.razor</DependentUpon>
+        </Compile>
+    </ItemGroup>
+
+
+    <ItemGroup>
+        <Folder Include="Controllers\"/>
+
+    </ItemGroup>
+
+
+    <ItemGroup>
+        <_ContentIncludedByDefault Remove="wwwroot\js\BlazorReteJsInterop.js"/>
+        <_ContentIncludedByDefault Remove="wwwroot\js\BlazorReteJsInterop.js.map"/>
+        <_ContentIncludedByDefault Remove="wwwroot\js\ObservablesJsInterop.js"/>
+        <_ContentIncludedByDefault Remove="wwwroot\js\ObservablesJsInterop.js.map"/>
+        <_ContentIncludedByDefault Remove="wwwroot\js\rete-component.js"/>
+        <_ContentIncludedByDefault Remove="wwwroot\js\rete-component.js.map"/>
+        <_ContentIncludedByDefault Remove="wwwroot\js\rete-custom-connection-component.js"/>
+        <_ContentIncludedByDefault Remove="wwwroot\js\rete-custom-connection-component.js.map"/>
+        <_ContentIncludedByDefault Remove="wwwroot\js\rete-custom-node-component.js"/>
+        <_ContentIncludedByDefault Remove="wwwroot\js\rete-custom-node-component.js.map"/>
+        <_ContentIncludedByDefault Remove="wwwroot\js\rete-custom-socket-component.js"/>
+        <_ContentIncludedByDefault Remove="wwwroot\js\rete-custom-socket-component.js.map"/>
+        <_ContentIncludedByDefault Remove="wwwroot\js\rete-dock-component.js"/>
+        <_ContentIncludedByDefault Remove="wwwroot\js\rete-dock-component.js.map"/>
+        <_ContentIncludedByDefault Remove="wwwroot\js\rete-editor-dock-manager.js"/>
+        <_ContentIncludedByDefault Remove="wwwroot\js\rete-editor-dock-manager.js.map"/>
+        <_ContentIncludedByDefault Remove="wwwroot\js\rete-editor-factory.js"/>
+        <_ContentIncludedByDefault Remove="wwwroot\js\rete-editor-factory.js.map"/>
+        <_ContentIncludedByDefault Remove="wwwroot\js\rete-editor-listener.js"/>
+        <_ContentIncludedByDefault Remove="wwwroot\js\rete-editor-listener.js.map"/>
+        <_ContentIncludedByDefault Remove="wwwroot\js\rete-editor-shared.js"/>
+        <_ContentIncludedByDefault Remove="wwwroot\js\rete-editor-shared.js.map"/>
+        <_ContentIncludedByDefault Remove="wwwroot\js\rete-editor-wrapper.js"/>
+        <_ContentIncludedByDefault Remove="wwwroot\js\rete-editor-wrapper.js.map"/>
+        <_ContentIncludedByDefault Remove="wwwroot\js\vars.js"/>
+        <_ContentIncludedByDefault Remove="wwwroot\js\vars.js.map"/>
+        <_ContentIncludedByDefault Remove="wwwroot\js\collections\disposable.js"/>
+        <_ContentIncludedByDefault Remove="wwwroot\js\collections\dotnet-observable-listener.js"/>
+        <_ContentIncludedByDefault Remove="wwwroot\js\collections\dotnet-observable-listener.test.js"/>
+        <_ContentIncludedByDefault Remove="wwwroot\js\collections\observable-collection.js"/>
+        <_ContentIncludedByDefault Remove="wwwroot\js\collections\observable-collection.test.js"/>
+        <_ContentIncludedByDefault Remove="wwwroot\js\collections\rx-observable-collection.js"/>
+        <_ContentIncludedByDefault Remove="wwwroot\js\collections\rx-observable-collection.test.js"/>
+        <_ContentIncludedByDefault Remove="wwwroot\js\scaffolding\dotnet-object-reference.js"/>
+        <_ContentIncludedByDefault Remove="wwwroot\js\scaffolding\element-size-watcher.js"/>
+        <_ContentIncludedByDefault Remove="wwwroot\js\scaffolding\utils.js"/>
     </ItemGroup>
 
     <Target Name="NPM Install" AfterTargets="PreBuildEvent">

@@ -1,4 +1,4 @@
-﻿import React = require("react");
+﻿import * as React from "react";
 import {createEditor} from "./rete-editor-factory";
 import {useRete} from "rete-react-plugin";
 

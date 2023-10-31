@@ -157,7 +157,9 @@ export function ReteCustomNodeComponent<Scheme extends ClassicScheme>(props: Ret
             width={width}
             height={height}
             styles={props.styles}
-            data-testid="node">
+            data-testid="node" 
+            isBusy={isBusy} 
+            status={props.data.status}>
             <div className="glossy"></div>
             {props.data.status == ReteNodeStatus.Success && <div className="glossy-success"></div>}
             {props.data.status == ReteNodeStatus.Danger && <div className="glossy-danger"></div>}

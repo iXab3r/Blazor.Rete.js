@@ -1,7 +1,10 @@
 ﻿//tsconfig is needed mostly for IDE support(as of 10/2023). The actual compiler is run by ESBuild
 {
   "compilerOptions": {
-    "target": "ES5",
+    "module": "ES6",
+    "target": "ES6",
+    "moduleResolution": "node",
+    "outDir": "./wwwroot/js",
     "jsx": "react",
     "lib": [
       "ES5",
@@ -9,7 +12,12 @@
       "ES2015",
       "ES2015.Promise",
       "ES2015.Collection",
-      "ES2017",
-    ]
-  }
+      "ES2017"
+    ],
+    "esModuleInterop": true,
+    "noEmit": true
+  },
+  "exclude": [
+    "node_modules"
+  ]
 }

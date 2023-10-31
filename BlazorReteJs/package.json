@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "@types/styled-components": "^5.1.29",
     "esbuild": "^0.19.4",
     "litepicker": "^2.0.12",
     "loglevel": "^1.8.1",
@@ -15,7 +16,8 @@
     "rete-readonly-plugin": "^2.0.0",
     "rete-render-utils": "^2.0.1",
     "rxjs": "^7.8.1",
-    "save-dev": "^0.0.1-security"
+    "save-dev": "^0.0.1-security",
+    "styled-components": "^5.3.6"
   },
   "name": "blazor.rete",
   "version": "1.0.0",
