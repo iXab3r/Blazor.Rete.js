@@ -6,10 +6,6 @@
         <RazorLangVersion>3.0</RazorLangVersion>
         <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
         <EnableDefaultContentItems>true<!-- Important for Blazor Scoped CSS --></EnableDefaultContentItems>
-        <ResolveCurrentProjectStaticWebAssetsInputsDependsOn>
-            NPM Index1;
-            $(ResolveCurrentProjectStaticWebAssetsInputsDependsOn)
-        </ResolveCurrentProjectStaticWebAssetsInputsDependsOn>
     </PropertyGroup>
 
     <ItemGroup>
@@ -30,6 +26,12 @@
         <SupportedPlatform Include="browser"/>
         <Watch Include="**\*.ts"/>
         <Watch Include="**\*.tsx"/>
+        <Content Remove="node_modules\**">
+            <!-- Npm modules must be excluded from file list -->
+        </Content>
+        <Content Remove="wwwroot\js\**">
+            <!-- TypeScript JS output is in that directory, it will be included at later stages of compilation -->
+        </Content>
         <Content Update="tsconfig.json">
             <CopyToOutputDirectory>Never</CopyToOutputDirectory>
             <CopyToPublishDirectory>Never</CopyToPublishDirectory>
@@ -50,57 +52,36 @@
         </Compile>
     </ItemGroup>
 
-
     <ItemGroup>
         <Folder Include="Controllers\"/>
-
     </ItemGroup>
 
-
-    <ItemGroup>
-        <_ContentIncludedByDefault Remove="wwwroot\js\BlazorReteJsInterop.js"/>
-        <_ContentIncludedByDefault Remove="wwwroot\js\BlazorReteJsInterop.js.map"/>
-        <_ContentIncludedByDefault Remove="wwwroot\js\ObservablesJsInterop.js"/>
-        <_ContentIncludedByDefault Remove="wwwroot\js\ObservablesJsInterop.js.map"/>
-        <_ContentIncludedByDefault Remove="wwwroot\js\rete-component.js"/>
-        <_ContentIncludedByDefault Remove="wwwroot\js\rete-component.js.map"/>
-        <_ContentIncludedByDefault Remove="wwwroot\js\rete-custom-connection-component.js"/>
-        <_ContentIncludedByDefault Remove="wwwroot\js\rete-custom-connection-component.js.map"/>
-        <_ContentIncludedByDefault Remove="wwwroot\js\rete-custom-node-component.js"/>
-        <_ContentIncludedByDefault Remove="wwwroot\js\rete-custom-node-component.js.map"/>
-        <_ContentIncludedByDefault Remove="wwwroot\js\rete-custom-socket-component.js"/>
-        <_ContentIncludedByDefault Remove="wwwroot\js\rete-custom-socket-component.js.map"/>
-        <_ContentIncludedByDefault Remove="wwwroot\js\rete-dock-component.js"/>
-        <_ContentIncludedByDefault Remove="wwwroot\js\rete-dock-component.js.map"/>
-        <_ContentIncludedByDefault Remove="wwwroot\js\rete-editor-dock-manager.js"/>
-        <_ContentIncludedByDefault Remove="wwwroot\js\rete-editor-dock-manager.js.map"/>
-        <_ContentIncludedByDefault Remove="wwwroot\js\rete-editor-factory.js"/>
-        <_ContentIncludedByDefault Remove="wwwroot\js\rete-editor-factory.js.map"/>
-        <_ContentIncludedByDefault Remove="wwwroot\js\rete-editor-listener.js"/>
-        <_ContentIncludedByDefault Remove="wwwroot\js\rete-editor-listener.js.map"/>
-        <_ContentIncludedByDefault Remove="wwwroot\js\rete-editor-shared.js"/>
-        <_ContentIncludedByDefault Remove="wwwroot\js\rete-editor-shared.js.map"/>
-        <_ContentIncludedByDefault Remove="wwwroot\js\rete-editor-wrapper.js"/>
-        <_ContentIncludedByDefault Remove="wwwroot\js\rete-editor-wrapper.js.map"/>
-        <_ContentIncludedByDefault Remove="wwwroot\js\vars.js"/>
-        <_ContentIncludedByDefault Remove="wwwroot\js\vars.js.map"/>
-        <_ContentIncludedByDefault Remove="wwwroot\js\collections\disposable.js"/>
-        <_ContentIncludedByDefault Remove="wwwroot\js\collections\dotnet-observable-listener.js"/>
-        <_ContentIncludedByDefault Remove="wwwroot\js\collections\dotnet-observable-listener.test.js"/>
-        <_ContentIncludedByDefault Remove="wwwroot\js\collections\observable-collection.js"/>
-        <_ContentIncludedByDefault Remove="wwwroot\js\collections\observable-collection.test.js"/>
-        <_ContentIncludedByDefault Remove="wwwroot\js\collections\rx-observable-collection.js"/>
-        <_ContentIncludedByDefault Remove="wwwroot\js\collections\rx-observable-collection.test.js"/>
-        <_ContentIncludedByDefault Remove="wwwroot\js\scaffolding\dotnet-object-reference.js"/>
-        <_ContentIncludedByDefault Remove="wwwroot\js\scaffolding\element-size-watcher.js"/>
-        <_ContentIncludedByDefault Remove="wwwroot\js\scaffolding\utils.js"/>
-    </ItemGroup>
-
-    <Target Name="NPM Install" AfterTargets="PreBuildEvent">
+    <Target Name="NPMInstall" AfterTargets="PreBuildEvent">
+        <Message Importance="high" Text="Running NPM Install" />
         <Exec Command="npm install"/>
+        <Message Importance="high" Text="Completed NPM Install" />
     </Target>
 
-    <Target Name="NPM Build" AfterTargets="NPM Install">
+    <Target Name="NPMBuild" AfterTargets="NPMInstall">
+        <Message Importance="high" Text="Running NPM Build" />
         <Exec Command="npm run build"/>
+        <ItemGroup>
+            <JSFiles Include="wwwroot/js/**">
+                <!-- Include TypeScript JS into file list, this is needed to allow for StaticWebAssets resolution -->
+            </JSFiles>
+        </ItemGroup>
+        <!-- Loop through each file in the Content item group and print its identity -->
+        <Message Importance="high" Text="Transpiled File: %(JSFiles.Identity)" Condition="'@(JSFiles)' != ''"/>
+        <ItemGroup>
+            <Content Include="@(JSFiles)"/>
+        </ItemGroup>
+
+        <Message Importance="high" Text="Completed NPM Build" />
+    </Target>
+
+    <Target Name="NPMTest" AfterTargets="NPMBuild">
+        <Message Importance="high" Text="Running NPM Test" />
+        <Exec Command="npm run test"/>
+        <Message Importance="high" Text="Completed NPM Test" />
     </Target>
 </Project>
