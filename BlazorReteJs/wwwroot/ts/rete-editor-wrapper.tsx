@@ -231,7 +231,7 @@ export class ReteEditorWrapper {
             return;
         }
 
-        console.info(`Setting Readonly-mode: ${this._arrangeDirection} => ${value}`);
+        console.info(`Setting Readonly-mode: ${this._readonly} => ${value}`);
         this._readonly = value;
         if (value === true) {
             this.readonlyPlugin.enable();
@@ -291,6 +291,10 @@ export class ReteEditorWrapper {
         }
 
         node.updateParams(nodeParams);
+        if (nodeParams.x !== null && nodeParams.x !== undefined && nodeParams.y !== null && nodeParams.y !== undefined) {
+            await this.areaPlugin.translate(node.id, { x: nodeParams.x, y: nodeParams.y })
+        }
+
         await this.areaPlugin.update('node', nodeParams.id);
     }
 
@@ -311,6 +315,11 @@ export class ReteEditorWrapper {
         if (await this.editor.addNode(node)) {
            
             console.info(`Added new node: ${JSON.stringify(node)}`);
+            if (nodeParams.x !== null && nodeParams.x !== undefined && nodeParams.y !== null && nodeParams.y !== undefined) {
+                const nodePosition = { x: nodeParams.x, y: nodeParams.y };
+                await this.areaPlugin.translate(node.id, nodePosition)
+                console.info(`Positioned new node: ${nodePosition}`);
+            }
             if (this._autoArrange) {
                 this.arrangeRequests.next(`Added node ${node.id}`);
             }
