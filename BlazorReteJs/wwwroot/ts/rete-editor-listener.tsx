@@ -1,10 +1,21 @@
-﻿import {ClassicPreset, NodeEditor, Root} from "rete";
-import {AreaExtensions, AreaPlugin, Area2D} from "rete-area-plugin";
-import {ReteNodeParams, ReteNodePosition, ReteNodeScheme, Schemes} from './rete-editor-shared'
-import {AreaExtra} from "./rete-editor-shared";
+﻿import {NodeEditor, Root} from "rete";
+import {Area2D, AreaPlugin} from "rete-area-plugin";
+import {AreaExtra, ReteNodePosition, Schemes} from './rete-editor-shared'
 import * as log from 'loglevel';
 
-import {Subject, Subscription, Observable, merge, tap, defer, bufferTime, filter, map, groupBy, scan, last, mergeMap} from 'rxjs';
+import {
+    bufferTime,
+    distinctUntilChanged,
+    filter,
+    groupBy,
+    map,
+    merge,
+    mergeMap,
+    Observable,
+    Subject,
+    Subscription,
+    tap
+} from 'rxjs';
 import {RxObservableCollection} from "./collections/rx-observable-collection";
 
 export class ReteEditorListener {
@@ -112,17 +123,21 @@ export class ReteEditorListener {
             this.logger.debug("Subscriber detected!");
             const eventSource = this.getNodePositionUpdatesRaw(includeTranslated);
 
+            //Rete generated thousands of events about position updates
+            //transporting all of them back to C# is unfeasible, that is why some buffering is required for most use-cases
             const groupedEvents = eventSource.pipe(
-                bufferTime(bufferTimeInMs || 0),
+                groupBy(event => event.id),  // group position updates by ID
+                mergeMap(group => group.pipe(
+                    bufferTime(bufferTimeInMs / 2 || 0), // buffer the events in each group
+                    filter(x => x.length > 0), // filter out empty buffers 
+                    map(bufferedEvents => bufferedEvents[bufferedEvents.length - 1]), // and take the latest event from each buffer
+                    filter(event => event !== undefined), // should never happen
+                    distinctUntilChanged((prev, curr) => {
+                        return prev.x === curr.x && prev.y === curr.y;
+                    })
+                )),
+                bufferTime(bufferTimeInMs / 2 || 0), // additional buffering on multi-ID level
                 filter(x => x.length > 0),
-                map(bufferedEvents => {
-                    this.logger.info(`Compressing: ${bufferedEvents.length} event(s)`);
-                    const updatesMap: { [id: string]: ReteNodePosition } = {};
-                    for (const event of bufferedEvents) {
-                        updatesMap[event.id!] = event;
-                    }
-                    return Object.values(updatesMap);
-                }),
             );
             
             const subscription = groupedEvents
