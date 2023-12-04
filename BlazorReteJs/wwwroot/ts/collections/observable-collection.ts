@@ -14,7 +14,6 @@ export enum ListChangeReason {
 export const None = Symbol('None');
 export type Optional<T> = T | typeof None;
 
-// ItemChange and RangeChange Types
 export type ItemChange<T> = {
     current: T;
     previous: Optional<T>;
@@ -27,7 +26,6 @@ export type RangeChange<T> = {
     index?: number;
 }
 
-// Change Class
 export class Change<T> {
     readonly reason: ListChangeReason;
     readonly type: ChangeType;
@@ -92,84 +90,84 @@ export function getChangeType(reason: ListChangeReason): ChangeType {
 }
 
 export class ObservableCollection<T> {
-    private readonly _items: T[] = [];
-    private readonly _eventListeners: Array<(event: Change<T>) => void> = [];
+    private readonly items: T[] = [];
+    private readonly eventListeners: Array<(event: Change<T>) => void> = [];
 
     public getItems(): T[] {
-        return this._items;
+        return this.items;
     }
 
     public add(item: T): void {
-        this._items.push(item);
+        this.items.push(item);
         this._notifyListeners(new Change(ListChangeReason.Add, item));
     }
 
     public remove(item: T): void {
-        const index = this._items.indexOf(item);
+        const index = this.items.indexOf(item);
         if (index > -1) {
-            this._items.splice(index, 1);
+            this.items.splice(index, 1);
             this._notifyListeners(new Change(ListChangeReason.Remove, item));
         }
     }
 
     public clear(): void {
-        this._items.length = 0;
-        this._notifyListeners(new Change(ListChangeReason.Clear, this._items[0])); // Using the first item as a placeholder since a clear operation doesn't directly deal with any item.
+        this.items.length = 0;
+        this._notifyListeners(new Change(ListChangeReason.Clear, this.items[0])); // Using the first item as a placeholder since a clear operation doesn't directly deal with any item.
     }
     
     public contains(item: T) : boolean {
-        return this._items.includes(item);
+        return this.items.includes(item);
     }
 
     public move(oldIndex: number, newIndex: number): void {
         if (oldIndex !== newIndex) {
-            const [item] = this._items.splice(oldIndex, 1);
-            this._items.splice(newIndex, 0, item);
+            const [item] = this.items.splice(oldIndex, 1);
+            this.items.splice(newIndex, 0, item);
             this._notifyListeners(new Change(ListChangeReason.Moved, item, None, newIndex, oldIndex));
         }
     }
 
     public addRange(items: T[]): void {
-        this._items.push(...items);
+        this.items.push(...items);
         this._notifyListeners(new Change<T>(ListChangeReason.AddRange, items));
     }
 
     public removeRange(items: T[]): void {
         items.forEach(item => {
-            const index = this._items.indexOf(item);
+            const index = this.items.indexOf(item);
             if (index > -1) {
-                this._items.splice(index, 1);
+                this.items.splice(index, 1);
             }
         });
         this._notifyListeners(new Change<T>(ListChangeReason.RemoveRange, items));
     }
 
     public replace(oldItem: T, newItem: T): void {
-        const index = this._items.indexOf(oldItem);
+        const index = this.items.indexOf(oldItem);
         if (index > -1) {
-            this._items[index] = newItem;
+            this.items[index] = newItem;
             this._notifyListeners(new Change(ListChangeReason.Replace, newItem, oldItem));
         }
     }
 
     public refresh(): void {
-        this._notifyListeners(new Change(ListChangeReason.Refresh, this._items[0])); // Using the first item as a placeholder since a refresh operation doesn't directly deal with any item.
+        this._notifyListeners(new Change(ListChangeReason.Refresh, this.items[0])); // Using the first item as a placeholder since a refresh operation doesn't directly deal with any item.
     }
 
     private _notifyListeners(event: Change<T>) {
-        for (const listener of this._eventListeners) {
+        for (const listener of this.eventListeners) {
             listener(event);
         }
     }
 
     public addListener(listener: (event: Change<T>) => void): void {
-        this._eventListeners.push(listener);
+        this.eventListeners.push(listener);
     }
 
     public removeListener(listener: (event: Change<T>) => void): void {
-        const index = this._eventListeners.indexOf(listener);
+        const index = this.eventListeners.indexOf(listener);
         if (index > -1) {
-            this._eventListeners.splice(index, 1);
+            this.eventListeners.splice(index, 1);
         }
     }
 }

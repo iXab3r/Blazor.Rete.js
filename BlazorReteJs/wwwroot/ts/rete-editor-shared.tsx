@@ -6,6 +6,9 @@ import {$nodeheight, $nodewidth, $socketmargin, $socketsize} from "./vars";
 
 const reteSocket = new ClassicPreset.Socket("socket");
 
+export type Position = { x: number; y: number };
+export type Rect = { left: number; top: number; right: number; bottom: number };
+
 export enum ReteNodeStatus {
     None,
     Success,
@@ -33,7 +36,7 @@ export interface ReteNodeParams {
     y?: number;
 }
 
-export class ReteNodeScheme extends ClassicPreset.Node {
+export class ReteNode extends ClassicPreset.Node {
     
     width: number = $nodewidth;
     height: number = $nodeheight;
@@ -170,7 +173,9 @@ export class ReteNodeScheme extends ClassicPreset.Node {
     }
 }
 
-export class ReteConnectionScheme<N extends ReteNodeScheme> extends ClassicPreset.Connection<N, N> {}
+export class ReteConnection<N extends ReteNode> extends ClassicPreset.Connection<N, N> {
+    isMagnetic?: boolean
+} 
 
 export type NodeExtraData = { 
     width?: number; 
@@ -188,8 +193,8 @@ export type ConnectionExtraData = {
     isLoop?: boolean 
 };
 
-export type ReteNodeSchemes = ReteNodeScheme;
-export type ReteConnectionSchemes = ReteConnectionScheme<ReteNodeSchemes>;
+export type ReteNodeSchemes = ReteNode;
+export type ReteConnectionSchemes = ReteConnection<ReteNodeSchemes>;
 export type Schemes = GetSchemes<ReteNodeSchemes, ReteConnectionSchemes>;
 export type AreaExtra = ReactArea2D<Schemes> | ContextMenuExtra;
 

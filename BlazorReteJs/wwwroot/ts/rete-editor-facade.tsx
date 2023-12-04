@@ -2,10 +2,10 @@
 import {ClassicPreset, NodeEditor} from "rete";
 import {AreaExtensions, AreaPlugin} from "rete-area-plugin";
 import {
-    AreaExtra,
+    AreaExtra, ReteConnection,
     ReteNodeParams,
     ReteNodePosition,
-    ReteNodeScheme,
+    ReteNode,
     ReteNodeSchemes,
     ReteNodeStatus,
     Schemes
@@ -27,12 +27,12 @@ import {ReteCustomConnectionComponent} from "./rete-custom-connection-component"
 import {verticalDockSetup} from "./rete-dock-component";
 import {ReteEditorListener} from "./rete-editor-listener";
 import {RxObservableCollection} from "./collections/rx-observable-collection";
-import {DotnetObjectReference} from "./scaffolding/dotnet-object-reference";
-import {ReteEditorDockManager} from "./rete-editor-dock-manager";
+import {ReteEditorDockManager} from "./dock/rete-editor-dock-manager";
 import {ReteCustomSocketComponent} from "./rete-custom-socket-component";
+import { MagneticConnection } from "./magnetic-connection/rete-magnetic-connection-component";
+import {useMagneticConnectionForEditor, useMagneticConnection} from "./magnetic-connection";
 
-
-export class ReteEditorWrapper {
+export class ReteEditorFacade {
     private readonly editor: NodeEditor<Schemes>;
     private readonly editorSizeWatcher: ElementSizeWatcher;
     private readonly areaPlugin: AreaPlugin<Schemes, AreaExtra>;
@@ -81,10 +81,11 @@ export class ReteEditorWrapper {
                 node(data) {
                     return ReteCustomNodeComponent
                 },
-                connection(context) {
+                connection(data) {
+                    if (data.payload.isMagnetic) return MagneticConnection;
                     return ReteCustomConnectionComponent;
                 },
-                socket(context) {
+                socket(data) {
                     return ReteCustomSocketComponent;
                 },
             }
@@ -98,6 +99,7 @@ export class ReteEditorWrapper {
 
         this.eventsListener = new ReteEditorListener(this.editor, this.areaPlugin);
         AreaExtensions.simpleNodesOrder(this.areaPlugin);
+        useMagneticConnectionForEditor(this.editor, this.connectionPlugin);
 
         this.dockPlugin = new DockPlugin<Schemes>();
         this.dockPlugin.addPreset(verticalDockSetup({ area: this.areaPlugin }));
@@ -245,7 +247,7 @@ export class ReteEditorWrapper {
         const sourceNode = this.getNodeById(sourceNodeId);
         const targetNode = this.getNodeById(targetNodeId);
         
-        const connection = new ClassicPreset.Connection(sourceNode, sourceNode.outputKey, targetNode, targetNode.inputKey);
+        const connection = new ReteConnection(sourceNode, sourceNode.outputKey, targetNode, targetNode.inputKey);
         if (connectionId) {
             connection.id = connectionId;
         }
@@ -298,7 +300,7 @@ export class ReteEditorWrapper {
         await this.areaPlugin.update('node', nodeParams.id);
     }
 
-    public async addNode(nodeParams: ReteNodeParams): Promise<ReteNodeScheme> {
+    public async addNode(nodeParams: ReteNodeParams): Promise<ReteNode> {
         console.info(`Adding new node: ${JSON.stringify(nodeParams)}`);
 
         if (nodeParams.id) {
@@ -310,7 +312,7 @@ export class ReteEditorWrapper {
             }
         }
 
-        const node = new ReteNodeScheme(nodeParams);
+        const node = new ReteNode(nodeParams);
         
         if (await this.editor.addNode(node)) {
            

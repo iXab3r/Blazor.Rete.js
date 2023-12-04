@@ -1,4 +1,4 @@
-﻿import {AreaExtra, ReteNodeParams, ReteNodeScheme, ReteNodeSchemes, Schemes} from './rete-editor-shared'
+﻿import {AreaExtra, ReteNodeParams, ReteNode, ReteNodeSchemes, Schemes} from '../rete-editor-shared'
 import {DockPlugin} from "rete-dock-plugin";
 
 export class ReteEditorDockManager<T extends Schemes> {
@@ -10,8 +10,7 @@ export class ReteEditorDockManager<T extends Schemes> {
     
     public addTemplate(nodeParams: ReteNodeParams): void {
         this.dockPlugin.add(() =>{
-            const result = new ReteNodeScheme(nodeParams);
-            return result;
+            return new ReteNode(nodeParams);
         });
     }
 }

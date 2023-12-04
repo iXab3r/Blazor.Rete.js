@@ -1,14 +1,14 @@
-﻿import {ReteEditorWrapper} from "./rete-editor-wrapper";
+﻿import {ReteEditorFacade} from "./rete-editor-facade";
 import ReteComponent from "./rete-component";
 import {createRoot} from "react-dom/client";
 import * as React from "react";
 import {StrictMode} from "react";
 
-const editors: { [id: string]: ReteEditorWrapper } = {};
+const editors: { [id: string]: ReteEditorFacade } = {};
 
 
 // Function to initialize (create + retrieve) the Rete editor
-export async function renderEditor(container: HTMLElement): Promise<ReteEditorWrapper> {
+export async function renderEditor(container: HTMLElement): Promise<ReteEditorFacade> {
     await createEditorElement(container);
     return await retrieveEditor(container);
 }
@@ -19,14 +19,14 @@ export async function createEditor(container: HTMLElement) {
     if (!editorCanvas){
         throw new DOMException(`Failed to find editor canvas`); 
     }
-    const editor = new ReteEditorWrapper(editorCanvas);
+    const editor = new ReteEditorFacade(editorCanvas);
     editors[container.id] = editor;
     return {
         destroy: () => editor.destroy()
     };
 }
 
-function getEditor(container: HTMLElement): ReteEditorWrapper {
+function getEditor(container: HTMLElement): ReteEditorFacade {
     const editorWrapper = editors[container.id];
     if (editorWrapper) {
         return editorWrapper;
@@ -43,7 +43,7 @@ async function createEditorElement(container: HTMLElement): Promise<void> {
     );
 }
 
-async function retrieveEditor(container: HTMLElement): Promise<ReteEditorWrapper> {
+async function retrieveEditor(container: HTMLElement): Promise<ReteEditorFacade> {
     return new Promise((resolve, reject) => {
         let totalWaitTime = 0;
         const interval = 10;  // Polling interval
