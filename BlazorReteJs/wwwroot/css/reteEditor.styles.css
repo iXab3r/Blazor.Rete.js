@@ -18,3 +18,27 @@
     background-size: 200px 200px, 200px 200px, 25px 25px, 25px 25px;
     background-position: -1.5px -1.5px, -1.5px -1.5px, -1.5px -1.5px, -1.5px -1.5px;
 }
+
+#lasso {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+#lasso polygon {
+    stroke: #6c7fe9ad;
+    stroke-dasharray: 10 5;
+    stroke-width: 2;
+    fill: rgb(144 161 255 / 21%);
+    z-index: 5;
+    animation: dash linear 1s infinite;
+}
+
+@keyframes dash {
+    to {
+        stroke-dashoffset: 15;
+    }
+}

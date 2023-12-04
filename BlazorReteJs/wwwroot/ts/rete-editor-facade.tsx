@@ -31,6 +31,7 @@ import {ReteEditorDockManager} from "./dock/rete-editor-dock-manager";
 import {ReteCustomSocketComponent} from "./rete-custom-socket-component";
 import { MagneticConnection } from "./magnetic-connection/rete-magnetic-connection-component";
 import {useMagneticConnectionForEditor, useMagneticConnection} from "./magnetic-connection";
+import { setupSelection } from './selection';
 
 export class ReteEditorFacade {
     private readonly editor: NodeEditor<Schemes>;
@@ -61,10 +62,6 @@ export class ReteEditorFacade {
         this.connectionPlugin = new ConnectionPlugin<Schemes, AreaExtra>();
         this.renderPlugin = new ReactPlugin<Schemes, AreaExtra>({createRoot});
         this.readonlyPlugin = new ReadonlyPlugin<Schemes>();
-
-        const nodeSelector = AreaExtensions.selectableNodes(this.areaPlugin, AreaExtensions.selector(), {
-            accumulating: AreaExtensions.accumulateOnCtrl()
-        });
 
         this.connectionPlugin.addPreset(ConnectionPresets.classic.setup());
         this.editor.use(this.areaPlugin);
@@ -121,6 +118,10 @@ export class ReteEditorFacade {
                     return this.arrangeNodes();
                 })
             ).subscribe())
+    }
+    
+    public getAreaPlugin() : AreaPlugin<Schemes, AreaExtra>{
+        return this.areaPlugin;
     }
 
     public getSelectedNodesCollection(): RxObservableCollection<string>{

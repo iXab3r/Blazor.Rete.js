@@ -1,7 +1,9 @@
 {
   "dependencies": {
     "@types/styled-components": "^5.1.29",
+    "antd": "^5.12.1",
     "esbuild": "^0.19.4",
+    "intersects": "^2.7.2",
     "litepicker": "^2.0.12",
     "loglevel": "^1.8.1",
     "react": "^18.2.0",
@@ -17,7 +19,8 @@
     "rete-render-utils": "^2.0.1",
     "rxjs": "^7.8.1",
     "save-dev": "^0.0.1-security",
-    "styled-components": "^5.3.6"
+    "styled-components": "^5.3.6",
+    "poly-decomp": "^0.3.0"
   },
   "name": "blazor.rete",
   "version": "1.0.0",
