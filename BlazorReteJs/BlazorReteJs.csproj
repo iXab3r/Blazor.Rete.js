@@ -56,13 +56,6 @@
         <Folder Include="Controllers\"/>
     </ItemGroup>
 
-    <ItemGroup>
-      <TypeScriptCompile Remove="wwwroot\ts\magnetic-connection\types.ts" />
-      <TypeScriptCompile Remove="wwwroot\ts\rete-editor-dock-manager.ts" />
-      <TypeScriptCompile Remove="wwwroot\ts\magnetic-connection\utils.ts" />
-      <TypeScriptCompile Remove="wwwroot\ts\magnetic-connection\math.ts" />
-    </ItemGroup>
-
     <Target Name="NPMInstall" AfterTargets="PreBuildEvent">
         <Message Importance="high" Text="Running NPM Install" />
         <Exec Command="npm install"/>
