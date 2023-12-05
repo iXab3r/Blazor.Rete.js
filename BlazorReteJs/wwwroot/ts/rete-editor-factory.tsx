@@ -50,7 +50,6 @@ export async function createEditor(container: HTMLElement) {
 
             editor.getAreaPlugin().area.setDragHandler(new Drag({
                 down: e => {
-                    console.log(`Event: ${e}, button: ${e.button}, panning button: ${panningButton}`);
                     if (e.pointerType === 'mouse' && e.button !== panningButton) return false
                     e.preventDefault()
                     return true

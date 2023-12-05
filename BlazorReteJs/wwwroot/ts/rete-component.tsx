@@ -72,39 +72,9 @@ export default function ReteComponent(props: ReteComponentProps) {
     useEffect(() => editor?.setSelectionButton(button), [editor, button])
 
     return (
-        <div>
-            <ModeSwitch>
-                <Radio.Group
-                    options={modeOptions}
-                    onChange={item => setMode(item.target.value)}
-                    value={mode}
-                    optionType="button"
-                    buttonStyle="solid"
-                />
-            </ModeSwitch>
-            <ShapeSwitch>
-                <Radio.Group
-                    options={shapeOptions}
-                    onChange={item => setShape(item.target.value)}
-                    value={shape}
-                    optionType="button"
-                    buttonStyle="solid"
-                />
-            </ShapeSwitch>
-            <ButtonSwitch>
-                <Radio.Group
-                    options={buttonOptions}
-                    onChange={item => setButton(item.target.value)}
-                    value={button}
-                    optionType="button"
-                    buttonStyle="solid"
-                />
-            </ButtonSwitch>
-            <div id={props.id} ref={ref} className={"ReteApp d-flex"} style={{height: "100%", width: "100%"}} >
-                <div id={"rete-editor-toolbar"} className={"overflow-auto"}></div>
-                <div id={"rete-editor-canvas"} className={"flex-grow-1"} style={{height: "100%"}}></div>
-            </div>
+        <div id={props.id} ref={ref} className={"ReteApp d-flex h-100 w-100"}>
+            <div id={"rete-editor-toolbar"} className={"overflow-auto"}></div>
+            <div id={"rete-editor-canvas"} className={"flex-grow-1"} style={{height: "100%"}}></div>
         </div>
-       
     );
 }

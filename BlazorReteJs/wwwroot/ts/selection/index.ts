@@ -21,8 +21,6 @@ function getPoint(event: PointerEvent, container: HTMLElement) {
         x: event.clientX - rect.left,
         y: event.clientY - rect.top
     };
-    console.log(`getPoint: ${JSON.stringify({ clientX: event.clientX, clientY: event.clientY, rect: rect.toJSON() })}, relative: ${JSON.stringify(relative)}`)
-    
     return relative
 }
 
@@ -127,7 +125,6 @@ export function setupSelection<S extends BaseSchemes, K>(area: AreaPlugin<S, K>,
             return (point.x + rect.left) + ',' + (point.y + rect.top);
         }).join(' ');
         lasso.setAttribute('points', pointString);
-        console.log(`Polygon points: ${JSON.stringify(pointString)}`)
     }
 
     return {
