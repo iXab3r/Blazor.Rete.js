@@ -3,7 +3,7 @@ import ReteComponent from "./rete-component";
 import {createRoot} from "react-dom/client";
 import * as React from "react";
 import {StrictMode} from "react";
-import {setupSelection} from "./selection";
+import {setupMouseAreaSelection} from "./selection";
 import { AreaExtensions, AreaPlugin, Drag } from 'rete-area-plugin';
 
 const editors: { [id: string]: ReteEditorFacade } = {};
@@ -22,22 +22,9 @@ export async function createEditor(container: HTMLElement) {
     }
     const editor = new ReteEditorFacade(editorCanvas);
     const areaPlugin = editor.getAreaPlugin();
-    const selector = AreaExtensions.selector()
-    const nodeSelector = AreaExtensions.selectableNodes(areaPlugin, AreaExtensions.selector(), {
-        accumulating: AreaExtensions.accumulateOnCtrl()
-    });
-    
-    const selection = setupSelection(areaPlugin, {
+    const selection = setupMouseAreaSelection(areaPlugin, {
         selected(ids) {
-            const [first, ...rest] = ids
-
-            selector.unselectAll()
-            if (first) {
-                nodeSelector.select(first, false);
-            }
-            for (const id of rest) {
-                nodeSelector.select(id, true);
-            }
+            editor.setSelectedNodes(ids)            
         },
     })
     

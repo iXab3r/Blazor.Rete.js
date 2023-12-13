@@ -34,7 +34,7 @@ type Options = {
     shape?: Shape
 }
 
-export function setupSelection<S extends BaseSchemes, K>(area: AreaPlugin<S, K>, options?: Options) {
+export function setupMouseAreaSelection<S extends BaseSchemes, K>(area: AreaPlugin<S, K>, options?: Options) {
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     const lasso = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
     const { container } = area

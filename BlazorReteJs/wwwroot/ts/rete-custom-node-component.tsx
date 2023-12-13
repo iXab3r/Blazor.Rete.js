@@ -9,7 +9,7 @@ const {RefSocket, RefControl} = Presets.classic;
 
 export const selectedShadow = '0px 2px 6px 2px #985700, 0 0 0px 5px #c9b144;'
 
-export const NodeStyles = styled.div<NodeExtraData & { styles?: (props: any) => any }>`
+export const NodeStyledComponent = styled.div<NodeExtraData & { styles?: (props: any) => any }>`
   border-radius: 10px;
   color: white;
   cursor: pointer;
@@ -18,6 +18,8 @@ export const NodeStyles = styled.div<NodeExtraData & { styles?: (props: any) => 
           Number.isFinite(props.width) ? `${props.width}px` : `${$nodewidth}px`};
   height: ${(props) =>
           Number.isFinite(props.height) ? `${props.height}px` : "auto"};
+  ${props => Number.isFinite(props.scale) ? `scale: ${props.scale};` : ''}
+
   padding-bottom: 6px;
   position: relative;
   user-select: none;
@@ -144,18 +146,22 @@ export function ReteCustomNodeComponent<Scheme extends ClassicScheme>(props: Ret
     const selected = props.data.selected || false;
     const isBusy = props.data.isBusy || false;
     const showSockets = Object.keys(props.data.inputs).length > 0 || Object.keys(props.data.outputs).length > 0;
-    const {id, label, width} = props.data;
+    const {id, label} = props.data;
+    
     const height = showSockets ? props.data.height : props.data.height / 2;
+    const width = props.data.width;
+    const scale = showSockets ? NaN : 0.75;
 
     sortByIndex(inputs);
     sortByIndex(outputs);
     sortByIndex(controls);
 
     return (
-        <NodeStyles
+        <NodeStyledComponent
             selected={selected}
             width={width}
             height={height}
+            scale={scale}
             styles={props.styles}
             data-testid="node" 
             isBusy={isBusy} 
@@ -229,6 +235,6 @@ export function ReteCustomNodeComponent<Scheme extends ClassicScheme>(props: Ret
                     />
                 ) : null;
             })}
-        </NodeStyles>
+        </NodeStyledComponent>
     );
 }

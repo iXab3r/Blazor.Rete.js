@@ -19,7 +19,6 @@ function createToolbar() {
 function getNodeContainer() {
     const element = document.createElement('div');
     const { style } = element
-    style.scale = "0.7";
     
     return element;
 }

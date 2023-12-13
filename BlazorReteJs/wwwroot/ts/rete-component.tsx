@@ -66,7 +66,6 @@ export default function ReteComponent(props: ReteComponentProps) {
     const [shape, setShape] = useState<Shape>('lasso')
     const [button, setButton] = useState<0 | 1>(1)
 
-
     useEffect(() => editor?.setSelectionMode(mode), [editor, mode])
     useEffect(() => editor?.setSelectionShape(shape), [editor, shape])
     useEffect(() => editor?.setSelectionButton(button), [editor, button])

@@ -1,4 +1,4 @@
-﻿import {ClassicPreset, GetSchemes} from "rete";
+﻿import {ClassicPreset, GetSchemes, NodeId} from "rete";
 import {ClassicScheme, Presets, RenderEmit} from "rete-react-plugin";
 import {ReactArea2D} from "rete-react-plugin";
 import { ContextMenuExtra } from "rete-context-menu-plugin";
@@ -180,6 +180,7 @@ export class ReteConnection<N extends ReteNode> extends ClassicPreset.Connection
 export type NodeExtraData = { 
     width?: number; 
     height?: number;
+    scale?: number;
     isBusy: boolean;
     body?: string;
     labelSuffix?: string;
@@ -215,3 +216,7 @@ export type NodeComponent<Scheme extends ClassicScheme> = (
     props: ReteCustomNodeProps<Scheme>
 ) => JSX.Element;
 
+export interface SelectableNodesAdapter {
+    select: (nodeId: NodeId, accumulate: boolean) => void;
+    unselect: (nodeId: NodeId) => void;
+}

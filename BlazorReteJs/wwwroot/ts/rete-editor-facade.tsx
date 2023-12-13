@@ -8,7 +8,7 @@ import {
     ReteNode,
     ReteNodeSchemes,
     ReteNodeStatus,
-    Schemes
+    Schemes, SelectableNodesAdapter
 } from './rete-editor-shared'
 import {ElementSizeWatcher} from "./scaffolding/element-size-watcher";
 
@@ -24,16 +24,17 @@ import {switchMap, throttleTime, debounceTime} from 'rxjs/operators';
 
 import {ReteCustomNodeComponent} from "./rete-custom-node-component";
 import {ReteCustomConnectionComponent} from "./rete-custom-connection-component";
-import {verticalDockSetup} from "./rete-dock-component";
+import {verticalDockSetup} from "./dock/rete-dock-component";
 import {ReteEditorListener} from "./rete-editor-listener";
 import {RxObservableCollection} from "./collections/rx-observable-collection";
 import {ReteEditorDockManager} from "./dock/rete-editor-dock-manager";
 import {ReteCustomSocketComponent} from "./rete-custom-socket-component";
 import { MagneticConnection } from "./magnetic-connection/rete-magnetic-connection-component";
 import {useMagneticConnectionForEditor, useMagneticConnection} from "./magnetic-connection";
-import { setupSelection } from './selection';
+import { setupMouseAreaSelection } from './selection';
+import {Selector} from "rete-area-plugin/_types/extensions";
 
-export class ReteEditorFacade {
+export class ReteEditorFacade  {
     private readonly editor: NodeEditor<Schemes>;
     private readonly editorSizeWatcher: ElementSizeWatcher;
     private readonly areaPlugin: AreaPlugin<Schemes, AreaExtra>;
@@ -48,6 +49,8 @@ export class ReteEditorFacade {
     private readonly eventsListener: ReteEditorListener;
     private readonly arrangeRequests: Subject<string> = new Subject<string>();
     private readonly anchors: Subscription = new Subscription();
+    private readonly selectableNodes: SelectableNodesAdapter;
+    private readonly selector: Selector<any>;
 
     private _backgroundEnabled: boolean = false;
     private _arrangeDirection: string = undefined;
@@ -72,6 +75,10 @@ export class ReteEditorFacade {
         this.arrangePlugin = new AutoArrangePlugin<Schemes>();
         this.arrangePlugin.addPreset(ArrangePresets.classic.setup());
         this.areaPlugin.use(this.arrangePlugin);
+
+        const accumulating = AreaExtensions.accumulateOnCtrl()
+        this.selector = AreaExtensions.selector()
+        this.selectableNodes = AreaExtensions.selectableNodes(this.areaPlugin, this.selector, { accumulating: accumulating });
 
         this.renderPlugin.addPreset(Presets.classic.setup({
             customize: {
@@ -118,6 +125,10 @@ export class ReteEditorFacade {
                     return this.arrangeNodes();
                 })
             ).subscribe())
+    }
+
+    public select(nodeId: string, accumulate: boolean){
+        return this.selectableNodes.select(nodeId, accumulate);
     }
     
     public getAreaPlugin() : AreaPlugin<Schemes, AreaExtra>{
@@ -168,10 +179,6 @@ export class ReteEditorFacade {
 
         console.info(`Setting ArrangeAnimate: ${this._arrangeAnimate} => ${value}`);
         this._arrangeAnimate = value;
-
-        if (this._arrangeAnimate) {
-            this.arrangeRequests.next(`Enabled ArrangeAnimate`);
-        }
     }
 
     public getArrangeDirection(): string {
@@ -411,6 +418,25 @@ export class ReteEditorFacade {
 
     public getSelectedNodes() {
         return this.getNodes().filter(x => x.selected);
+    }
+    
+    public clearSelectedNodes() {
+        const selected = this.selector.entities;
+        console.info(`Clearing selection, current: ${JSON.stringify(selected)}`);
+        this.selector.unselectAll();
+    }
+    
+    public setSelectedNodes(nodeIds: string[]) {
+        const [first, ...rest] = nodeIds
+        console.info(`Selecting nodes by Id: ${JSON.stringify(nodeIds)}`);
+        
+        this.selector.unselectAll()
+        if (first) {
+            this.selectableNodes.select(first, false);
+        }
+        for (const id of rest) {
+            this.selectableNodes.select(id, true);
+        }
     }
 
     public getSelectedNodesIds() {

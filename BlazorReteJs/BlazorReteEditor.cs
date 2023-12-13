@@ -122,6 +122,16 @@ public partial class BlazorReteEditor
     {
         return await reteEditorFacade.GetSelectedNodesCollection();
     }
+    
+    public async Task SetSelectedNodes(IReadOnlyList<string> nodesIds)
+    {
+        await reteEditorFacade.SetSelectedNodes(nodesIds.ToArray());
+    }
+    
+    public async Task ClearSelectedNodes()
+    {
+        await reteEditorFacade.ClearSelectedNodes();
+    }
 
     public async Task UpdateNode(ReteNodeParams nodeParams)
     {
