@@ -80,12 +80,16 @@ public partial class BlazorReteEditor
     
     public async Task<IObservableList<string>> GetNodes()
     {
+        EnsureLoaded();
+
         var collection = await reteEditorFacade.GetNodesCollection();
         return collection;
     }
 
     public async Task<IObservableCache<ReteConnection, string>> GetConnectionsCache()
     {
+        EnsureLoaded();
+
         var nodes = await GetConnections();
         return nodes
             .Connect()
@@ -100,12 +104,14 @@ public partial class BlazorReteEditor
     
     public async Task<IObservableList<string>> GetConnections()
     {
+        EnsureLoaded();
         var collection = await reteEditorFacade.GetConnectionsCollection();
         return collection;
     }
     
     public async Task<IObservableCache<ReteNode, string>> GetNodesCache()
     {
+        EnsureLoaded();
         var nodes = await GetNodes();
         return nodes
             .Connect()
@@ -120,47 +126,56 @@ public partial class BlazorReteEditor
 
     public async Task<IObservableList<string>> GetSelectedNodes()
     {
+        EnsureLoaded();
         return await reteEditorFacade.GetSelectedNodesCollection();
     }
     
     public async Task SetSelectedNodes(IReadOnlyList<string> nodesIds)
     {
+        EnsureLoaded();
         await reteEditorFacade.SetSelectedNodes(nodesIds.ToArray());
     }
     
     public async Task ClearSelectedNodes()
     {
+        EnsureLoaded();
         await reteEditorFacade.ClearSelectedNodes();
     }
 
     public async Task UpdateNode(ReteNodeParams nodeParams)
     {
+        EnsureLoaded();
         await reteEditorFacade.UpdateNode(nodeParams);
     }
     
     public Task UpdateNode(ReteNode node)
     {
+        EnsureLoaded();
         return UpdateNode(new ReteNodeParams(){ Id = node.Id});
     }
     
     public async Task UpdateConnection(ReteConnection connection)
     {
+        EnsureLoaded();
         await reteEditorFacade.UpdateConnection(connection.Id);
     }
 
     public async Task<bool> RemoveConnection(ReteConnection connection)
     {
+        EnsureLoaded();
         var result = await reteEditorFacade.RemoveConnection(connection.Id);
         return result;
     }
 
     public async Task AddDockTemplate(ReteNodeParams nodeParams)
     {
+        EnsureLoaded();
         await reteEditorFacade.AddDockTemplate(nodeParams);
     }
 
     public async Task<ReteConnection> AddConnection(ReteNode source, ReteNode target, string connectionId = default)
     {
+        EnsureLoaded();
         var jsConnection = await reteEditorFacade.AddConnection(source.Id, target.Id, connectionId);
         var csConnection = await ReteConnection.FromJsConnection(JsRuntime, jsConnection);
         return csConnection;
@@ -168,6 +183,7 @@ public partial class BlazorReteEditor
 
     public async Task<ReteNode> GetNode(string nodeId)
     {
+        EnsureLoaded();
         var jsNode = await reteEditorFacade.GetNodeById(nodeId);
         var csNode = await ReteNode.FromJsNode(JsRuntime, jsNode);
         return csNode;
@@ -175,6 +191,7 @@ public partial class BlazorReteEditor
     
     public async Task<ReteNode> AddNode(ReteNodeParams nodeParams)
     {
+        EnsureLoaded();
         var jsNode = await reteEditorFacade.AddNode(nodeParams);
         var csNode = await ReteNode.FromJsNode(JsRuntime, jsNode);
         if (!string.IsNullOrEmpty(nodeParams.Id) && !string.Equals(csNode.Id, nodeParams.Id))
@@ -186,21 +203,33 @@ public partial class BlazorReteEditor
 
     public async Task Clear()
     {
+        EnsureLoaded();
         await reteEditorFacade.Clear();
     }
     
     public async Task ArrangeNodes()
     {
+        EnsureLoaded();
         await reteEditorFacade.ArrangeNodes();
     }
     
     public async Task ZoomAtNodes()
     {
+        EnsureLoaded();
         await reteEditorFacade.ZoomAtNodes();
     }
 
     public async Task<bool> RemoveNode(ReteNode node)
     {
+        EnsureLoaded();
         return await reteEditorFacade.RemoveNode(node.Id);
+    }
+
+    private void EnsureLoaded()
+    {
+        if (reteEditorFacade == null)
+        {
+            throw new InvalidOperationException("Editor is not ready yet, wait until it is loaded");
+        }
     }
 }
