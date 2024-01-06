@@ -6,11 +6,13 @@
     "intersects": "^2.7.2",
     "litepicker": "^2.0.12",
     "loglevel": "^1.8.1",
+    "poly-decomp": "^0.3.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "rete": "^2.0.2",
     "rete-area-plugin": "^2.0.1",
     "rete-auto-arrange-plugin": "^2.0.0",
+    "rete-connection-path-plugin": "^2.0.2",
     "rete-connection-plugin": "^2.0.0",
     "rete-context-menu-plugin": "^2.0.0",
     "rete-dock-plugin": "^2.0.0",
@@ -19,8 +21,7 @@
     "rete-render-utils": "^2.0.1",
     "rxjs": "^7.8.1",
     "save-dev": "^0.0.1-security",
-    "styled-components": "^5.3.6",
-    "poly-decomp": "^0.3.0"
+    "styled-components": "^5.3.6"
   },
   "name": "blazor.rete",
   "version": "1.0.0",

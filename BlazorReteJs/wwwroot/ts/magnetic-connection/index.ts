@@ -44,8 +44,7 @@ export function useMagneticConnectionForEditor<S extends Schemes, K = never>(
             const socketRadius = 10;
 
             return {
-                x:
-                    position.x + (socket.side === "input" ? -socketRadius : socketRadius),
+                x: position.x,// + (socket.side === "input" ? -socketRadius : socketRadius),
                 y: position.y
             };
         }

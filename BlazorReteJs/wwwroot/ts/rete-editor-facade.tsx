@@ -14,6 +14,7 @@ import {ElementSizeWatcher} from "./scaffolding/element-size-watcher";
 
 import {ArrangeAppliers, AutoArrangePlugin, Presets as ArrangePresets} from "rete-auto-arrange-plugin";
 import {ConnectionPlugin, Presets as ConnectionPresets} from "rete-connection-plugin";
+import { ConnectionPathPlugin, Transformers } from 'rete-connection-path-plugin';
 import {Presets, ReactPlugin} from "rete-react-plugin";
 import {ReadonlyPlugin} from "rete-readonly-plugin";
 import {DockPlugin} from "rete-dock-plugin";
@@ -33,6 +34,7 @@ import { MagneticConnection } from "./magnetic-connection/rete-magnetic-connecti
 import {useMagneticConnectionForEditor, useMagneticConnection} from "./magnetic-connection";
 import { setupMouseAreaSelection } from './selection';
 import {Selector} from "rete-area-plugin/_types/extensions";
+import {getDOMSocketPosition} from "rete-render-utils";
 
 export class ReteEditorFacade  {
     private readonly editor: NodeEditor<Schemes>;
@@ -72,7 +74,21 @@ export class ReteEditorFacade  {
         this.areaPlugin.use(this.renderPlugin);
 
         this.arrangePlugin = new AutoArrangePlugin<Schemes>();
-        this.arrangePlugin.addPreset(ArrangePresets.classic.setup());
+        this.arrangePlugin.addPreset(() => {
+            return {
+                port(data) {
+                    const spacing = data.width / (data.ports + 1)
+
+                    return {
+                        x: spacing * (data.index + 1),
+                        y: 0,
+                        width: 15,
+                        height: 15,
+                        side: data.side === 'output' ? 'SOUTH' : 'NORTH'
+                    }
+                },
+            }
+        })
         this.areaPlugin.use(this.arrangePlugin);
 
         const accumulating = AreaExtensions.accumulateOnCtrl()
@@ -91,14 +107,22 @@ export class ReteEditorFacade  {
                 socket(data) {
                     return ReteCustomSocketComponent;
                 },
-            }
-        }))
+            },
+            // eslint-disable-next-line react-hooks/rules-of-hooks
+            socketPositionWatcher: getDOMSocketPosition({
+                offset: (position, nodeId, side) => {
+                    return ({
+                        x: position.x,
+                        y: position.y + 5 * (side === 'input' ? -1 : 1)
+                    });
+                }
+            })
+        }));
 
-        /*this.contextMenuPlugin = new ContextMenuPlugin<Schemes>({
-            items: ContextMenuPresets.classic.setup([])
-        });
-        this.areaPlugin.use(this.contextMenuPlugin);
-        this.renderPlugin.addPreset(Presets.contextMenu.setup())*/
+        const path = new ConnectionPathPlugin({
+            transformer: () => Transformers.classic({ vertical: true })
+        })
+        this.renderPlugin.use(path)
 
         // disable zoom on double-click
         this.areaPlugin.addPipe(context => {
