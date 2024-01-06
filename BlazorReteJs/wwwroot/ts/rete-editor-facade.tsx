@@ -43,7 +43,6 @@ export class ReteEditorFacade  {
     private readonly arrangePlugin: AutoArrangePlugin<Schemes>;
     private readonly readonlyPlugin: ReadonlyPlugin<Schemes>;
     private readonly dockPlugin: DockPlugin<Schemes>;
-    private readonly contextMenuPlugin: ContextMenuPlugin<Schemes>;
     private readonly dockManager: ReteEditorDockManager<Schemes>;
     private readonly background: HTMLDivElement = this.prepareBackgroundElement();
     private readonly eventsListener: ReteEditorListener;
@@ -95,11 +94,17 @@ export class ReteEditorFacade  {
             }
         }))
 
-        this.contextMenuPlugin = new ContextMenuPlugin<Schemes>({
+        /*this.contextMenuPlugin = new ContextMenuPlugin<Schemes>({
             items: ContextMenuPresets.classic.setup([])
         });
         this.areaPlugin.use(this.contextMenuPlugin);
-        this.renderPlugin.addPreset(Presets.contextMenu.setup())
+        this.renderPlugin.addPreset(Presets.contextMenu.setup())*/
+
+        // disable zoom on double-click
+        this.areaPlugin.addPipe(context => {
+            if (context.type ===  'zoom' && context.data.source === 'dblclick') return
+            return context
+        })
 
         this.eventsListener = new ReteEditorListener(this.editor, this.areaPlugin);
         AreaExtensions.simpleNodesOrder(this.areaPlugin);
