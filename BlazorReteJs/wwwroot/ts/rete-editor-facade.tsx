@@ -8,7 +8,7 @@ import {
     ReteNode,
     ReteNodeSchemes,
     ReteNodeStatus,
-    Schemes, SelectableNodesAdapter
+    Schemes, SelectableNodesAdapter, ReteNodeConnectionParams
 } from './rete-editor-shared'
 import {ElementSizeWatcher} from "./scaffolding/element-size-watcher";
 
@@ -279,25 +279,6 @@ export class ReteEditorFacade  {
         }
     }
 
-    public async addConnection(sourceNodeId: string, targetNodeId: string, connectionId: string) {
-        console.info(`Adding new connection: ${sourceNodeId} => ${targetNodeId}`)
-        const sourceNode = this.getNodeById(sourceNodeId);
-        const targetNode = this.getNodeById(targetNodeId);
-        
-        const connection = new ReteConnection(sourceNode, sourceNode.outputKey, targetNode, targetNode.inputKey);
-        if (connectionId) {
-            connection.id = connectionId;
-        }
-        if (await this.editor.addConnection(connection)) {
-            if (this._autoArrange) {
-                this.arrangeRequests.next(`Added new connection ${sourceNodeId} => ${targetNodeId} (${connection.id})`);
-            }
-            return connection;
-        } else {
-            throw `Failed to add connection ${sourceNodeId} => ${targetNodeId}`;
-        }
-    }
-
     public async removeConnection(connectionId: string): Promise<boolean> {
         console.info(`Removing connection by Id: ${connectionId}`)
         const connection = this.editor.getConnection(connectionId);
@@ -316,9 +297,20 @@ export class ReteEditorFacade  {
         }
     }
 
-    public async updateNode(nodeParams: ReteNodeParams): Promise<void> {
-        console.info(`Updating node: ${JSON.stringify(nodeParams)}`);
+    public async updateNodes(nodes: ReteNodeParams[]): Promise<void> {
+        if (nodes.length <= 0){
+            return;
+        }
+        console.info(`Updating ${nodes.length} nodes`);
+        for (let nodeParams of nodes) {
+            await this.updateNode(nodeParams, true);
+        }
+    }
 
+    public async updateNode(nodeParams: ReteNodeParams, silent: boolean = false): Promise<void> {
+        if (!silent){
+            console.info(`Updating node: ${JSON.stringify(nodeParams)}`);
+        }
         // Check if id is provided in nodeParams
         if (!nodeParams.id) {
             throw new Error("Node ID is not specified in the provided parameters.");
@@ -337,35 +329,103 @@ export class ReteEditorFacade  {
         await this.areaPlugin.update('node', nodeParams.id);
     }
 
-    public async addNode(nodeParams: ReteNodeParams): Promise<ReteNode> {
-        console.info(`Adding new node: ${JSON.stringify(nodeParams)}`);
+    public async addConnectionsDotNet(connections: ReteNodeConnectionParams[]): Promise<any[]>{
+        const result = await this.addConnections(connections);
+        return result.map(x => DotNet.createJSObjectReference(x));
+    }
 
+    public async addConnections(connections: ReteNodeConnectionParams[]): Promise<ReteConnection<ReteNode>[]>{
+        console.info(`Adding ${connections.length} new connection`)
+        let result: ReteConnection<ReteNode>[] = [];
+        for (let connectionParams of connections){
+            const node = await this.addConnectionOrThrow(connectionParams);
+            result.push(node);
+        }
+
+        if (this._autoArrange) {
+            this.arrangeRequests.next(`Added new connections`);
+        }
+        return result;
+    }
+
+    public async addConnectionOrThrow(connectionParams: ReteNodeConnectionParams): Promise<ReteConnection<ReteNode>>{
+        const sourceNode = this.getNodeById(connectionParams.sourceNodeId);
+        const targetNode = this.getNodeById(connectionParams.targetNodeId);
+
+        const connection = new ReteConnection(sourceNode, sourceNode.outputKey, targetNode, targetNode.inputKey);
+        if (connectionParams.connectionId) {
+            connection.id = connectionParams.connectionId;
+        }
+        if (await this.editor.addConnection(connection)) {
+            return connection;
+        } else {
+            throw `Failed to add connection ${JSON.stringify(connectionParams)}`;
+        }
+    }
+
+    public async addConnection(connectionParams: ReteNodeConnectionParams, silent: boolean = false): Promise<ReteConnection<ReteNode>> {
+        if (!silent){
+            console.info(`Adding new connection: ${JSON.stringify(connectionParams)}`);
+        }
+        const connection = await this.addConnectionOrThrow(connectionParams);
+        if (this._autoArrange) {
+            this.arrangeRequests.next(`Added new connection ${connectionParams.sourceNodeId} => ${connectionParams.targetNodeId} (${connection.id})`);
+        }
+        return connection;
+    }
+    
+    public async addNodesDotNet(nodes: ReteNodeParams[]): Promise<any[]>{
+        const result = await this.addNodes(nodes);
+        return result.map(x => DotNet.createJSObjectReference(x));
+    }
+
+    public async addNodes(nodes: ReteNodeParams[]): Promise<ReteNode[]> {
+        console.info(`Adding new ${nodes.length} nodes`);
+        let result: ReteNode[] = [];
+        for (let nodeParams of nodes){
+            const node = await this.addNodeOrThrow(nodeParams);
+            result.push(node);
+        }
+        if (this._autoArrange) {
+            this.arrangeRequests.next(`Added ${nodes.length} nodes`);
+        }
+        return result;
+    }
+    
+    public async addNodeOrThrow(nodeParams: ReteNodeParams): Promise<ReteNode> {
         if (nodeParams.id) {
             const existingNode = this.getNodeById(nodeParams.id);
-            
+
             if (existingNode){
                 console.warn(`Failed to add node with ID ${nodeParams.id} - it already exists: ${JSON.stringify(existingNode)}`);
                 throw new Error(`Node with ID ${nodeParams.id} already exists`);
             }
         }
-
         const node = new ReteNode(nodeParams);
-        
         if (await this.editor.addNode(node)) {
-           
-            console.info(`Added new node: ${JSON.stringify(node)}`);
             if (nodeParams.x !== null && nodeParams.x !== undefined && nodeParams.y !== null && nodeParams.y !== undefined) {
                 const nodePosition = { x: nodeParams.x, y: nodeParams.y };
                 await this.areaPlugin.translate(node.id, nodePosition)
-                console.info(`Positioned new node: ${nodePosition}`);
-            }
-            if (this._autoArrange) {
-                this.arrangeRequests.next(`Added node ${node.id}`);
             }
             return node;
         } else {
-            throw "Failed to add node";
+            throw `Failed to add node ${nodeParams.id}`;
         }
+    }
+    
+    public async addNode(nodeParams: ReteNodeParams, silent: boolean = false): Promise<ReteNode> {
+        if (!silent){
+            console.info(`Adding new node: ${JSON.stringify(nodeParams)}`);
+        }
+        
+        let node = await this.addNodeOrThrow(nodeParams);
+        if (!silent){
+            console.info(`Added new node: ${JSON.stringify(node)}`);
+        }
+        if (this._autoArrange) {
+            this.arrangeRequests.next(`Added node ${node.id}`);
+        }
+        return node;
     }
 
     public async removeSelectedNodes(): Promise<void> {

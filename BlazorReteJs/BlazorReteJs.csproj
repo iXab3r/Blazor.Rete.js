@@ -6,6 +6,7 @@
         <RazorLangVersion>3.0</RazorLangVersion>
         <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
         <EnableDefaultContentItems>true<!-- Important for Blazor Scoped CSS --></EnableDefaultContentItems>
+        <Nullable>enable</Nullable>
     </PropertyGroup>
 
     <ItemGroup>

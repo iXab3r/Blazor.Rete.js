@@ -1,18 +1,19 @@
+#nullable enable
 using System.Text.Json.Serialization;
 
 namespace BlazorReteJs.Api;
 
-public readonly record struct ReteNodePosition
+public readonly record struct ReteConnectionParams
 {
     [JsonPropertyName("id")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-    public string Id { get; init; }
+    public string? Id { get; init; }
     
-    [JsonPropertyName("x")]
+    [JsonPropertyName("sourceNodeId")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-    public float? X { get; init; }
+    public string? SourceNodeId { get; init; }
     
-    [JsonPropertyName("y")]
+    [JsonPropertyName("targetNodeId")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-    public float? Y { get; init; }
+    public string? TargetNodeId { get; init; }
 }

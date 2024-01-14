@@ -13,30 +13,28 @@ namespace BlazorReteJs;
 public partial class BlazorReteEditor
 {
     private ElementReference editorRef;
-    private IJSObjectReference reteModule;
-    private IJSObjectReference blazorReteJsInterop;
-    private IJSObjectReference observablesJsInterop;
-    private ReteEditorFacade reteEditorFacade;
+    private IJSObjectReference? reteModule;
+    private IJSObjectReference? blazorReteJsInterop;
+    private IJSObjectReference? observablesJsInterop;
+    private ReteEditorFacade? reteEditorFacade;
     
     private readonly ISubject<Unit> whenLoaded = new ReplaySubject<Unit>(1);
 
     [Inject] protected IJSRuntime JsRuntime { get; private set; }
 
-    internal ReteEditorFacade JsEditor => reteEditorFacade ?? throw new ArgumentNullException(nameof(reteEditorFacade), $"JavaScript editor is not initialized");
-
     public IObservable<Unit> WhenLoaded => whenLoaded;
 
-    public JsProperty<ReteArrangeDirection> ArrangeDirection => reteEditorFacade.ArrangeDirection;
+    public JsProperty<ReteArrangeDirection> ArrangeDirection => GetFacadeOrThrow().ArrangeDirection;
     
-    public JsProperty<ReteArrangeAlgorithm> ArrangeAlgorithm => reteEditorFacade.ArrangeAlgorithm;
+    public JsProperty<ReteArrangeAlgorithm> ArrangeAlgorithm => GetFacadeOrThrow().ArrangeAlgorithm;
     
-    public JsProperty<bool> BackgroundEnabled => reteEditorFacade.BackgroundEnabled;
+    public JsProperty<bool> BackgroundEnabled => GetFacadeOrThrow().BackgroundEnabled;
     
-    public JsProperty<bool> Readonly => reteEditorFacade.Readonly;
+    public JsProperty<bool> Readonly => GetFacadeOrThrow().Readonly;
 
-    public JsProperty<bool> AutoArrange => reteEditorFacade.AutoArrange;
+    public JsProperty<bool> AutoArrange => GetFacadeOrThrow().AutoArrange;
     
-    public JsProperty<bool> ArrangeAnimate => reteEditorFacade.ArrangeAnimate;
+    public JsProperty<bool> ArrangeAnimate => GetFacadeOrThrow().ArrangeAnimate;
 
     public IObservable<ReteNodePosition[]> NodePositionUpdates { get; }
 
@@ -46,7 +44,7 @@ public partial class BlazorReteEditor
             .SelectMany(async _ =>
             {
                 var observableReference = await reteEditorFacade!.GetNodePositionUpdatesObservable(bufferTime: TimeSpan.FromMilliseconds(250), includeTranslated: true);
-                var listener = JsObservableListenerFacade<ReteNodePosition[]>.CreateObservable(JsRuntime, observableReference);
+                var listener = JsObservableListenerFacade<ReteNodePosition[]>.CreateObservable(JsRuntime!, observableReference);
                 return listener; 
             })
             .Switch();
@@ -80,22 +78,22 @@ public partial class BlazorReteEditor
     
     public async Task<IObservableList<string>> GetNodes()
     {
-        EnsureLoaded();
+        GetFacadeOrThrow();
 
-        var collection = await reteEditorFacade.GetNodesCollection();
+        var collection = await GetFacadeOrThrow().GetNodesCollection();
         return collection;
     }
 
     public async Task<IObservableCache<ReteConnection, string>> GetConnectionsCache()
     {
-        EnsureLoaded();
+        GetFacadeOrThrow();
 
         var nodes = await GetConnections();
         return nodes
             .Connect()
             .TransformAsync(async connectionId =>
             {
-                var jsConnection = await reteEditorFacade.GetConnectionById(connectionId);
+                var jsConnection = await GetFacadeOrThrow().GetConnectionById(connectionId);
                 return await ReteConnection.FromJsConnection(JsRuntime, jsConnection);
             })
             .AddKey(x => x.Id)
@@ -104,20 +102,18 @@ public partial class BlazorReteEditor
     
     public async Task<IObservableList<string>> GetConnections()
     {
-        EnsureLoaded();
-        var collection = await reteEditorFacade.GetConnectionsCollection();
+        var collection = await GetFacadeOrThrow().GetConnectionsCollection();
         return collection;
     }
     
     public async Task<IObservableCache<ReteNode, string>> GetNodesCache()
     {
-        EnsureLoaded();
         var nodes = await GetNodes();
         return nodes
             .Connect()
             .TransformAsync(async nodeId =>
             {
-                var jsNode = await reteEditorFacade.GetNodeById(nodeId);
+                var jsNode = await GetFacadeOrThrow().GetNodeById(nodeId);
                 return await ReteNode.FromJsNode(JsRuntime, jsNode);
             })
             .AddKey(x => x.Id)
@@ -126,73 +122,82 @@ public partial class BlazorReteEditor
 
     public async Task<IObservableList<string>> GetSelectedNodes()
     {
-        EnsureLoaded();
-        return await reteEditorFacade.GetSelectedNodesCollection();
+        return await GetFacadeOrThrow().GetSelectedNodesCollection();
     }
     
     public async Task SetSelectedNodes(IReadOnlyList<string> nodesIds)
     {
-        EnsureLoaded();
-        await reteEditorFacade.SetSelectedNodes(nodesIds.ToArray());
+        await GetFacadeOrThrow().SetSelectedNodes(nodesIds.ToArray());
     }
     
     public async Task ClearSelectedNodes()
     {
-        EnsureLoaded();
-        await reteEditorFacade.ClearSelectedNodes();
+        await GetFacadeOrThrow().ClearSelectedNodes();
     }
 
-    public async Task UpdateNode(ReteNodeParams nodeParams)
+    public async Task UpdateNodes(params ReteNodeParams[] nodeParams)
     {
-        EnsureLoaded();
-        await reteEditorFacade.UpdateNode(nodeParams);
+        await GetFacadeOrThrow().UpdateNodes(nodeParams);
     }
     
     public Task UpdateNode(ReteNode node)
     {
-        EnsureLoaded();
-        return UpdateNode(new ReteNodeParams(){ Id = node.Id});
+        GetFacadeOrThrow();
+        return UpdateNodes(new ReteNodeParams(){ Id = node.Id});
     }
     
     public async Task UpdateConnection(ReteConnection connection)
     {
-        EnsureLoaded();
-        await reteEditorFacade.UpdateConnection(connection.Id);
+        await GetFacadeOrThrow().UpdateConnection(connection.Id);
     }
 
     public async Task<bool> RemoveConnection(ReteConnection connection)
     {
-        EnsureLoaded();
-        var result = await reteEditorFacade.RemoveConnection(connection.Id);
+        var result = await GetFacadeOrThrow().RemoveConnection(connection.Id);
         return result;
     }
 
     public async Task AddDockTemplate(ReteNodeParams nodeParams)
     {
-        EnsureLoaded();
-        await reteEditorFacade.AddDockTemplate(nodeParams);
+        await GetFacadeOrThrow().AddDockTemplate(nodeParams);
     }
 
-    public async Task<ReteConnection> AddConnection(ReteNode source, ReteNode target, string connectionId = default)
+    public async Task<ReteConnection[]> AddConnections(params ReteConnectionParams[] connectionParams)
     {
-        EnsureLoaded();
-        var jsConnection = await reteEditorFacade.AddConnection(source.Id, target.Id, connectionId);
-        var csConnection = await ReteConnection.FromJsConnection(JsRuntime, jsConnection);
+        var jsConnections = await GetFacadeOrThrow().AddConnections(connectionParams);
+        
+        if (jsConnections.Length != connectionParams.Length)
+        {
+            throw new InvalidOperationException($"Something is wrong - expected {connectionParams.Length} JS connections, got {jsConnections.Length}");
+        }
+
+        return jsConnections.Zip(connectionParams)
+            .Select(x => ReteConnection.FromJsConnection(JsRuntime, x.First, x.Second))
+            .ToArray();
+    }
+    
+    public async Task<ReteConnection> AddConnection(ReteConnectionParams connectionParams)
+    {
+        var jsConnection = await GetFacadeOrThrow().AddConnection(connectionParams);
+        var csConnection = ReteConnection.FromJsConnection(JsRuntime, jsConnection, connectionParams);
         return csConnection;
+    }
+    
+    public Task<ReteConnection> AddConnection(ReteNode source, ReteNode target, string? connectionId = default)
+    {
+        return AddConnection(new ReteConnectionParams() {Id = connectionId, SourceNodeId = source.Id, TargetNodeId = target.Id});
     }
 
     public async Task<ReteNode> GetNode(string nodeId)
     {
-        EnsureLoaded();
-        var jsNode = await reteEditorFacade.GetNodeById(nodeId);
+        var jsNode = await GetFacadeOrThrow().GetNodeById(nodeId);
         var csNode = await ReteNode.FromJsNode(JsRuntime, jsNode);
         return csNode;
     }
     
     public async Task<ReteNode> AddNode(ReteNodeParams nodeParams)
     {
-        EnsureLoaded();
-        var jsNode = await reteEditorFacade.AddNode(nodeParams);
+        var jsNode = await GetFacadeOrThrow().AddNode(nodeParams);
         var csNode = await ReteNode.FromJsNode(JsRuntime, jsNode);
         if (!string.IsNullOrEmpty(nodeParams.Id) && !string.Equals(csNode.Id, nodeParams.Id))
         {
@@ -200,36 +205,48 @@ public partial class BlazorReteEditor
         }
         return csNode;
     }
+    
+    public async Task<IReadOnlyList<ReteNode>> AddNodes(params ReteNodeParams[] nodeParams)
+    {
+        var jsNodes = await GetFacadeOrThrow().AddNodes(nodeParams);
+
+        if (jsNodes.Length != nodeParams.Length)
+        {
+            throw new InvalidOperationException($"Something is wrong - expected {nodeParams.Length} JS nodes, got {jsNodes.Length}");
+        }
+        var result = jsNodes.Zip(nodeParams)
+            .Select(x => ReteNode.FromJsNode(JsRuntime, x.First, x.Second.Id!))
+            .ToArray();
+        return result;
+    }
 
     public async Task Clear()
     {
-        EnsureLoaded();
-        await reteEditorFacade.Clear();
+        await GetFacadeOrThrow().Clear();
     }
     
     public async Task ArrangeNodes()
     {
-        EnsureLoaded();
-        await reteEditorFacade.ArrangeNodes();
+        await GetFacadeOrThrow().ArrangeNodes();
     }
     
     public async Task ZoomAtNodes()
     {
-        EnsureLoaded();
-        await reteEditorFacade.ZoomAtNodes();
+        await GetFacadeOrThrow().ZoomAtNodes();
     }
 
     public async Task<bool> RemoveNode(ReteNode node)
     {
-        EnsureLoaded();
-        return await reteEditorFacade.RemoveNode(node.Id);
+        return await GetFacadeOrThrow().RemoveNode(node.Id);
     }
 
-    private void EnsureLoaded()
+    private ReteEditorFacade GetFacadeOrThrow()
     {
         if (reteEditorFacade == null)
         {
             throw new InvalidOperationException("Editor is not ready yet, wait until it is loaded");
         }
+
+        return reteEditorFacade;
     }
 }

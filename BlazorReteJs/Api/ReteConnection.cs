@@ -13,8 +13,6 @@ public class ReteConnection
         Id = connectionId;
         Source = new JsField<string>(jsRuntime, connectionRef, "source");
         Target = new JsField<string>(jsRuntime, connectionRef, "target");
-        SourceOutput = new JsField<string>(jsRuntime, connectionRef, "sourceOutput");
-        TargetInput = new JsField<string>(jsRuntime, connectionRef, "targetInput");
         IsActive = new JsField<bool>(jsRuntime, connectionRef, "isActive");
     }
     
@@ -24,10 +22,6 @@ public class ReteConnection
     
     public JsField<string> Source { get; }
     
-    public JsField<string> SourceOutput { get; }
-    
-    public JsField<string> TargetInput { get; }
-    
     public JsField<bool> IsActive { get; }
     
     public static async Task<ReteConnection> FromJsConnection(IJSRuntime jsRuntime, IJSObjectReference connectionRef)
@@ -36,14 +30,19 @@ public class ReteConnection
         var result = new ReteConnection(id, jsRuntime, connectionRef);
         await result.Source.GetValue();
         await result.Target.GetValue();
-        await result.TargetInput.GetValue();
-        await result.SourceOutput.GetValue();
-        await result.IsActive.GetValue();
+        return result;
+    }
+    
+    public static ReteConnection FromJsConnection(IJSRuntime jsRuntime, IJSObjectReference connectionRef, ReteConnectionParams connectionParams)
+    {
+        var result = new ReteConnection(connectionParams.Id!, jsRuntime, connectionRef);
+        result.Source.ReportValue(connectionParams.SourceNodeId!);
+        result.Target.ReportValue(connectionParams.TargetNodeId!);
         return result;
     }
 
     public override string ToString()
     {
-        return new { Id, Target = Target.Value, Source = Source.Value, SourceOutput = SourceOutput.Value, TargetInput = TargetInput.Value }.ToString();
+        return new { Id, Target = Target.Value, Source = Source.Value }.ToString();
     }
 }

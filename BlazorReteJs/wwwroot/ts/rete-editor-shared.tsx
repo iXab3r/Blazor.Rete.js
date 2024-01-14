@@ -22,6 +22,12 @@ export interface ReteNodePosition {
     y?: number;
 }
 
+export interface ReteNodeConnectionParams {
+    connectionId: string;
+    sourceNodeId: string; 
+    targetNodeId: string;
+}
+
 export interface ReteNodeParams {
     label?: string;
     labelPrefix?: string;

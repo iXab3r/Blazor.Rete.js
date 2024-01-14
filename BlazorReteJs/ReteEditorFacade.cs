@@ -1,5 +1,4 @@
-﻿using System.Reactive.Linq;
-using BlazorReteJs.Api;
+﻿using BlazorReteJs.Api;
 using BlazorReteJs.Collections;
 using BlazorReteJs.Scaffolding;
 using DynamicData;
@@ -46,9 +45,24 @@ internal sealed class ReteEditorFacade
         return editorRef.InvokeAsync<IJSObjectReference>("addNode", nodeParams);
     }
     
-    public ValueTask<IJSObjectReference> AddConnection(string sourceNodeId, string targetNodeId, string connectionId = default) 
+    public ValueTask<IJSObjectReference[]> AddNodes(params ReteNodeParams[] nodeParams) 
     {
-        return editorRef.InvokeAsync<IJSObjectReference>("addConnection", sourceNodeId, targetNodeId, connectionId);
+        return editorRef.InvokeAsync<IJSObjectReference[]>("addNodesDotNet", nodeParams);
+    }
+
+    public ValueTask<IJSObjectReference[]> AddConnections(params ReteConnectionParams[] connectionParams)
+    {
+        return editorRef.InvokeAsync<IJSObjectReference[]>("addConnectionsDotNet", connectionParams);
+    }
+    
+    public ValueTask<IJSObjectReference> AddConnection(ReteConnectionParams connectionParams)
+    {
+        return editorRef.InvokeAsync<IJSObjectReference>("addConnection", connectionParams);
+    }
+    
+    public ValueTask<IJSObjectReference> AddConnection(string sourceNodeId, string targetNodeId, string? connectionId = default)
+    {
+        return AddConnection(new ReteConnectionParams() {Id = connectionId, SourceNodeId = sourceNodeId, TargetNodeId = targetNodeId});
     } 
     
     public ValueTask<bool> RemoveConnection(string connectionId) 
@@ -76,9 +90,14 @@ internal sealed class ReteEditorFacade
         return editorRef.InvokeVoidAsync("removeSelectedNodes");
     }
     
-    public ValueTask UpdateNode(ReteNodeParams nodeParams) 
+    public ValueTask UpdateNode(ReteNodeParams nodeParams)
     {
         return editorRef.InvokeVoidAsync("updateNode", nodeParams);
+    }
+    
+    public ValueTask UpdateNodes(params ReteNodeParams[] nodeParams)
+    {
+        return nodeParams.Length == 1 ? UpdateNode(nodeParams[0]) : editorRef.InvokeVoidAsync("updateNodes", nodeParams);
     }
     
     public ValueTask UpdateConnection(string connectionId) 
