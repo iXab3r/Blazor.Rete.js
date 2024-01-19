@@ -3,7 +3,7 @@ using Microsoft.JSInterop;
 
 namespace BlazorReteJs.Api;
 
-public class ReteNode
+public class ReteNode : IAsyncDisposable
 {
     public ReteNode(string nodeId, IJSRuntime jsRuntime, IJSObjectReference nodeRef)
     {
@@ -52,6 +52,12 @@ public class ReteNode
 
     public override string ToString()
     {
-        return new { Id }.ToString();
+        return $"ReteNode {Id}";
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await NodeRef.DisposeAsync();
+        GC.SuppressFinalize(this);
     }
 }

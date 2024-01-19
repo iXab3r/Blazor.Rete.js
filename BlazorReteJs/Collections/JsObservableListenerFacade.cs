@@ -23,7 +23,14 @@ public sealed class JsObservableListenerFacade<T>
             {
                 consumer.Dispose();
                 subscription.Dispose();
-                await jsSubscription.InvokeVoidAsync("dispose");
+                try
+                {
+                    await jsSubscription.InvokeVoidAsync("dispose");
+                }
+                catch (JSException)
+                {
+                    //could be already cleared at this point
+                }
             };
         });
     }
