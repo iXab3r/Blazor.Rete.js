@@ -11,6 +11,7 @@
 
     <ItemGroup>
         <PackageReference Include="DynamicData" Version="8.0.2"/>
+        <PackageReference Include="Microsoft.AspNetCore.Components.CustomElements" Version="7.0.0" />
         <PackageReference Include="Microsoft.TypeScript.MSBuild" Version="5.2.2">
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -20,6 +21,7 @@
         <PackageReference Include="Microsoft.AspNetCore.Components" Version="7.0.0"/>
         <PackageReference Include="PropertyChanged.Fody" Version="3.4.0" PrivateAssets='All'/>
         <PackageReference Include="ReactiveUI" Version="18.0.10"/>
+        <PackageReference Include="StronglyTypedId" Version="1.0.0-beta07" />
         <PackageReference Include="System.Linq.Async" Version="6.0.1"/>
     </ItemGroup>
 
@@ -51,10 +53,6 @@
         <Compile Update="BlazorReteEditor.cs">
             <DependentUpon>BlazorReteEditor.razor</DependentUpon>
         </Compile>
-    </ItemGroup>
-
-    <ItemGroup>
-        <Folder Include="Controllers\"/>
     </ItemGroup>
 
     <Target Name="NPMInstall" AfterTargets="PreBuildEvent">

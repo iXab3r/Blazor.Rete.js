@@ -10,7 +10,6 @@ public class ReteNode : IAsyncDisposable
         Id = nodeId;
         JsRuntime = jsRuntime;
         NodeRef = nodeRef;
-        IsBusy = new JsField<bool>(jsRuntime, nodeRef, "isBusy");
         IsSelected = new JsField<bool>(jsRuntime, nodeRef, "selected");
         Label = new JsField<string>(jsRuntime, nodeRef, "label");
     }
@@ -20,8 +19,6 @@ public class ReteNode : IAsyncDisposable
     public JsField<string> Label { get; }
     
     public JsField<bool> IsSelected { get; }
-    
-    public JsField<bool> IsBusy { get; }
     
     public IJSRuntime JsRuntime { get; }
     

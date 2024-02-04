@@ -1,0 +1,64 @@
+﻿@typeparam TNode
+@using BlazorReteJs.Services
+
+@if (Editor?.NodeTemplate == null)
+{
+    <div style="width: 100%; height: 100%; background: #0a53be; border: 1px solid red;">
+        <h3>Id: @Id</h3>
+        <h3>EditorId: @EditorId</h3>
+    </div>
+}
+else
+{
+    @Editor.NodeTemplate(this)
+}
+
+@code {
+    [Parameter] public string? Id { get; set; }
+
+    [Parameter] public string? EditorId { get; set; }
+    
+    [Parameter] public string? Label { get; set; }
+
+    [Parameter] public TNode? ExtraParams { get; set; }
+
+    [Inject] internal IBlazorReteEditorStorage? EditorStorage { get; private set; }
+
+    private IBlazorReteEditor<TNode>? Editor { get; set; }
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+
+        var storage = GetStorageOrThrow();
+        if (string.IsNullOrEmpty(EditorId))
+        {
+            throw new ArgumentException("EditorId must be set");
+        }
+
+        if (string.IsNullOrEmpty(Id))
+        {
+            throw new ArgumentException("Id must be set");
+        }
+
+        var editorId = new ReteEditorId(EditorId);
+        var editor = storage.Get(editorId);
+        if (editor is not IBlazorReteEditor<TNode> typedEditor)
+        {
+            throw new ArgumentException($"Editor with Id {EditorId} is expected to be of type {typeof(IBlazorReteEditor<TNode>)}, but was {editor.GetType()}");
+        }
+
+        Editor = typedEditor;
+    }
+
+    private IBlazorReteEditorStorage GetStorageOrThrow()
+    {
+        if (EditorStorage == null)
+        {
+            throw new InvalidOperationException("EditorStorage is not ready yet, wait until it is loaded");
+        }
+
+        return EditorStorage;
+    }
+
+}

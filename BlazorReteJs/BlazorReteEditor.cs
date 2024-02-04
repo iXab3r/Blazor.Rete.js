@@ -1,54 +1,90 @@
 ﻿using System.Reactive;
+using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using BlazorReteJs.Api;
 using BlazorReteJs.Collections;
 using BlazorReteJs.Scaffolding;
+using BlazorReteJs.Services;
 using DynamicData;
 using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.Logging;
 using Microsoft.JSInterop;
 
 namespace BlazorReteJs;
 
-public partial class BlazorReteEditor
+public partial class BlazorReteEditor<TNode> : IAsyncDisposable, IBlazorReteEditor<TNode>
 {
     private ElementReference editorRef;
     private IJSObjectReference? reteModule;
     private IJSObjectReference? blazorReteJsInterop;
     private IJSObjectReference? observablesJsInterop;
     private ReteEditorFacade? reteEditorFacade;
-    
+    private IDisposable? storageAnchor;
+
     private readonly ISubject<Unit> whenLoaded = new ReplaySubject<Unit>(1);
 
-    [Inject] protected IJSRuntime JsRuntime { get; private set; }
+    [Parameter] public RenderFragment<BlazorReteNode<TNode>>? NodeTemplate { get; set; }
 
     public IObservable<Unit> WhenLoaded => whenLoaded;
 
-    public JsProperty<ReteArrangeDirection> ArrangeDirection => GetFacadeOrThrow().ArrangeDirection;
-    
-    public JsProperty<ReteArrangeAlgorithm> ArrangeAlgorithm => GetFacadeOrThrow().ArrangeAlgorithm;
-    
     public JsProperty<bool> BackgroundEnabled => GetFacadeOrThrow().BackgroundEnabled;
-    
-    public JsProperty<bool> Readonly => GetFacadeOrThrow().Readonly;
 
-    public JsProperty<bool> AutoArrange => GetFacadeOrThrow().AutoArrange;
-    
-    public JsProperty<bool> ArrangeAnimate => GetFacadeOrThrow().ArrangeAnimate;
+    public JsProperty<bool> Readonly => GetFacadeOrThrow().Readonly;
 
     public IObservable<ReteNodePosition[]> NodePositionUpdates { get; }
 
-    public BlazorReteEditor()
+    [Inject] protected IJSRuntime? JsRuntime { get; private set; }
+
+    [Inject] internal IBlazorReteEditorStorage? EditorStorage { get; private set; }
+
+    ReteEditorId IBlazorReteEditor.Id { get; } = new($"BlazorReteEditor-{Guid.NewGuid()}");
+
+    private ReteEditorId Id => ((IBlazorReteEditor)this).Id;
+    
+    private ILogger Log { get; }
+
+    public BlazorReteEditor(ILoggerFactory loggerFactory)
     {
+        Log = loggerFactory.CreateLogger(GetType());
         NodePositionUpdates = WhenLoaded
             .SelectMany(async _ =>
             {
                 var observableReference = await reteEditorFacade!.GetNodePositionUpdatesObservable(bufferTime: TimeSpan.FromMilliseconds(250), includeTranslated: true);
                 var listener = JsObservableListenerFacade<ReteNodePosition[]>.CreateObservable(JsRuntime!, observableReference);
-                return listener; 
+                return listener;
             })
             .Switch();
+
+        WhenTemplateCreate = WhenLoaded
+            .Select(_ =>
+            {
+                return Observable.Create<ReteDockTemplateCreateEventArgs>(async (observer) =>
+                {
+                    var listener = await ReteDockTemplateListenerFacade.Create(reteEditorFacade!);
+                    var subscription = listener.WhenTemplateCreate.Subscribe(observer);
+                    
+                    // ReSharper disable once AsyncVoidLambda
+                    return async () =>
+                    {
+                        subscription.Dispose();
+                        try
+                        {
+                            await listener.DisposeAsync();
+                        }
+                        catch (JSException)
+                        {
+                            //could be already cleared/disposed/refreshed at this point
+                        }
+                    };
+                });
+            })
+            .Switch()
+            .Publish()
+            .RefCount();
     }
+    
+    public IObservable<ReteDockTemplateCreateEventArgs> WhenTemplateCreate { get; }
 
     protected override async Task OnInitializedAsync()
     {
@@ -56,30 +92,27 @@ public partial class BlazorReteEditor
         await HandleLoaded();
     }
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        await base.OnAfterRenderAsync(firstRender);
-    }
-
     private async Task HandleLoaded()
     {
-        blazorReteJsInterop = (await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./_content/BlazorReteJs/js/BlazorReteJsInterop.js"))
-                      ?? throw new FileLoadException("Failed to load BlazorReteJsInterop JS module");
-        observablesJsInterop = (await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./_content/BlazorReteJs/js/ObservablesJsInterop.js"))
+        blazorReteJsInterop = (await GetJSRuntimeOrThrow().InvokeAsync<IJSObjectReference>("import", "./_content/BlazorReteJs/js/BlazorReteJsInterop.js"))
+                              ?? throw new FileLoadException("Failed to load BlazorReteJsInterop JS module");
+        observablesJsInterop = (await GetJSRuntimeOrThrow().InvokeAsync<IJSObjectReference>("import", "./_content/BlazorReteJs/js/ObservablesJsInterop.js"))
                                ?? throw new FileLoadException("Failed to load ObservablesJsInterop JS module");
-        reteModule = (await JsRuntime.InvokeAsync<IJSObjectReference>("import", "./_content/BlazorReteJs/js/rete-editor-factory.js"))
+        reteModule = (await GetJSRuntimeOrThrow().InvokeAsync<IJSObjectReference>("import", "./_content/BlazorReteJs/js/rete-editor-factory.js"))
                      ?? throw new FileLoadException("Failed to load Rete JS module");
-        var editorReference = await reteModule!.InvokeAsync<IJSObjectReference>("renderEditor", editorRef)
+
+        var editorReference = await reteModule.InvokeAsync<IJSObjectReference>("renderEditor", editorRef)
                               ?? throw new ArgumentException("Failed to initialize Rete.js editor");
+        storageAnchor = GetStorageOrThrow().Add(this);
+
         reteEditorFacade = new ReteEditorFacade(editorReference);
         await BackgroundEnabled.SetValue(true);
         whenLoaded.OnNext(Unit.Default);
     }
-    
+
     public async Task<IObservableList<string>> GetNodes()
     {
         GetFacadeOrThrow();
-
         var collection = await GetFacadeOrThrow().GetNodesCollection();
         return collection;
     }
@@ -93,19 +126,28 @@ public partial class BlazorReteEditor
             .Connect()
             .TransformAsync(async connectionId =>
             {
-                var jsConnection = await GetFacadeOrThrow().GetConnectionById(connectionId);
-                return await ReteConnection.FromJsConnection(JsRuntime, jsConnection);
+                try
+                {
+                    var jsConnection = await GetFacadeOrThrow().GetConnectionById(connectionId).ConfigureAwait(true);
+                    return await ReteConnection.FromJsConnection(GetJSRuntimeOrThrow(), jsConnection).ConfigureAwait(true);
+                }
+                catch (Exception e)
+                {
+                    Log.LogWarning(e, "Failed to resolve connection by Id {ConnectionId}", connectionId);
+                    return null!;
+                }
             })
+            .Filter(x => x != null!)
             .AddKey(x => x.Id)
             .AsObservableCache();
     }
-    
+
     public async Task<IObservableList<string>> GetConnections()
     {
         var collection = await GetFacadeOrThrow().GetConnectionsCollection();
         return collection;
     }
-    
+
     public async Task<IObservableCache<ReteNode, string>> GetNodesCache()
     {
         var nodes = await GetNodes();
@@ -113,9 +155,18 @@ public partial class BlazorReteEditor
             .Connect()
             .TransformAsync(async nodeId =>
             {
-                var jsNode = await GetFacadeOrThrow().GetNodeById(nodeId);
-                return await ReteNode.FromJsNode(JsRuntime, jsNode);
+                try
+                {
+                    var jsNode = await GetFacadeOrThrow().GetNodeById(nodeId).ConfigureAwait(true);
+                    return ReteNode.FromJsNode(GetJSRuntimeOrThrow(), jsNode, nodeId);
+                }
+                catch (Exception e)
+                {
+                    Log.LogWarning(e, "Failed to resolve node by Id {NodeId}", nodeId);
+                    return null!;
+                }
             })
+            .Filter(x => x != null!)
             .AddKey(x => x.Id)
             .AsObservableCache();
     }
@@ -124,12 +175,12 @@ public partial class BlazorReteEditor
     {
         return await GetFacadeOrThrow().GetSelectedNodesCollection();
     }
-    
+
     public async Task SetSelectedNodes(IReadOnlyList<string> nodesIds)
     {
         await GetFacadeOrThrow().SetSelectedNodes(nodesIds.ToArray());
     }
-    
+
     public async Task ClearSelectedNodes()
     {
         await GetFacadeOrThrow().ClearSelectedNodes();
@@ -139,13 +190,7 @@ public partial class BlazorReteEditor
     {
         await GetFacadeOrThrow().UpdateNodes(nodeParams);
     }
-    
-    public Task UpdateNode(ReteNode node)
-    {
-        GetFacadeOrThrow();
-        return UpdateNodes(new ReteNodeParams(){ Id = node.Id});
-    }
-    
+
     public async Task UpdateConnection(ReteConnection connection)
     {
         await GetFacadeOrThrow().UpdateConnection(connection.Id);
@@ -156,7 +201,7 @@ public partial class BlazorReteEditor
         var result = await GetFacadeOrThrow().RemoveConnection(connection.Id);
         return result;
     }
-
+    
     public async Task AddDockTemplate(ReteNodeParams nodeParams)
     {
         await GetFacadeOrThrow().AddDockTemplate(nodeParams);
@@ -165,24 +210,24 @@ public partial class BlazorReteEditor
     public async Task<ReteConnection[]> AddConnections(params ReteConnectionParams[] connectionParams)
     {
         var jsConnections = await GetFacadeOrThrow().AddConnections(connectionParams);
-        
+
         if (jsConnections.Length != connectionParams.Length)
         {
             throw new InvalidOperationException($"Something is wrong - expected {connectionParams.Length} JS connections, got {jsConnections.Length}");
         }
 
         return jsConnections.Zip(connectionParams)
-            .Select(x => ReteConnection.FromJsConnection(JsRuntime, x.First, x.Second))
+            .Select(x => ReteConnection.FromJsConnection(GetJSRuntimeOrThrow(), x.First, x.Second))
             .ToArray();
     }
-    
+
     public async Task<ReteConnection> AddConnection(ReteConnectionParams connectionParams)
     {
         var jsConnection = await GetFacadeOrThrow().AddConnection(connectionParams);
-        var csConnection = ReteConnection.FromJsConnection(JsRuntime, jsConnection, connectionParams);
+        var csConnection = ReteConnection.FromJsConnection(GetJSRuntimeOrThrow(), jsConnection, connectionParams);
         return csConnection;
     }
-    
+
     public Task<ReteConnection> AddConnection(ReteNode source, ReteNode target, string? connectionId = default)
     {
         return AddConnection(new ReteConnectionParams() {Id = connectionId, SourceNodeId = source.Id, TargetNodeId = target.Id});
@@ -191,21 +236,24 @@ public partial class BlazorReteEditor
     public async Task<ReteNode> GetNode(string nodeId)
     {
         var jsNode = await GetFacadeOrThrow().GetNodeById(nodeId);
-        var csNode = await ReteNode.FromJsNode(JsRuntime, jsNode);
-        return csNode;
+        return ReteNode.FromJsNode(GetJSRuntimeOrThrow(), jsNode, nodeId);
     }
-    
+
     public async Task<ReteNode> AddNode(ReteNodeParams nodeParams)
     {
         var jsNode = await GetFacadeOrThrow().AddNode(nodeParams);
-        var csNode = await ReteNode.FromJsNode(JsRuntime, jsNode);
+        var csNode = 
+            string .IsNullOrEmpty(nodeParams.Id) 
+                ? await ReteNode.FromJsNode(GetJSRuntimeOrThrow(), jsNode)
+                : ReteNode.FromJsNode(GetJSRuntimeOrThrow(), jsNode, nodeParams.Id);
         if (!string.IsNullOrEmpty(nodeParams.Id) && !string.Equals(csNode.Id, nodeParams.Id))
         {
             throw new ArgumentException($"Failed to create node with Id {nodeParams.Id}, result: {csNode}", nameof(nodeParams.Id));
         }
+
         return csNode;
     }
-    
+
     public async Task<IReadOnlyList<ReteNode>> AddNodes(params ReteNodeParams[] nodeParams)
     {
         var jsNodes = await GetFacadeOrThrow().AddNodes(nodeParams);
@@ -214,8 +262,9 @@ public partial class BlazorReteEditor
         {
             throw new InvalidOperationException($"Something is wrong - expected {nodeParams.Length} JS nodes, got {jsNodes.Length}");
         }
+
         var result = jsNodes.Zip(nodeParams)
-            .Select(x => ReteNode.FromJsNode(JsRuntime, x.First, x.Second.Id!))
+            .Select(x => ReteNode.FromJsNode(GetJSRuntimeOrThrow(), x.First, x.Second.Id!))
             .ToArray();
         return result;
     }
@@ -224,12 +273,12 @@ public partial class BlazorReteEditor
     {
         await GetFacadeOrThrow().Clear();
     }
-    
+
     public async Task ArrangeNodes()
     {
         await GetFacadeOrThrow().ArrangeNodes();
     }
-    
+
     public async Task ZoomAtNodes()
     {
         await GetFacadeOrThrow().ZoomAtNodes();
@@ -248,5 +297,56 @@ public partial class BlazorReteEditor
         }
 
         return reteEditorFacade;
+    }
+
+    private IJSRuntime GetJSRuntimeOrThrow()
+    {
+        if (JsRuntime == null)
+        {
+            throw new InvalidOperationException("JSRuntime is not ready yet, wait until it is loaded");
+        }
+
+        return JsRuntime;
+    }
+
+
+    private IBlazorReteEditorStorage GetStorageOrThrow()
+    {
+        if (EditorStorage == null)
+        {
+            throw new InvalidOperationException("EditorStorage is not ready yet, wait until it is loaded");
+        }
+
+        return EditorStorage;
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        return;
+        
+        if (storageAnchor != null)
+        {
+            storageAnchor.Dispose();
+        }
+
+        if (reteEditorFacade != null)
+        {
+            reteEditorFacade.Dispose();
+        }
+
+        if (blazorReteJsInterop != null)
+        {
+            await blazorReteJsInterop.DisposeAsync();
+        }
+
+        if (observablesJsInterop != null)
+        {
+            await observablesJsInterop.DisposeAsync();
+        }
+
+        if (reteModule != null)
+        {
+            await reteModule.DisposeAsync();
+        }
     }
 }

@@ -9,15 +9,13 @@
     <div class="w-100" style="height: 15%">
         <div class="hstack">
             JavaScript
-            <button class="btn btn-primary" @onclick="@(async () => await editor.JsEditor.AddNode(GenerateRandomTemplate()))">Add Node</button>
-            <button class="btn btn-primary" @onclick="@(async () => await editor.JsEditor.RemoveSelectedNodes())">Remove Nodes</button>
-            <button class="btn btn-primary" @onclick="@(async () => await editor.JsEditor.ArrangeNodes())">Arrange</button>
-            <button class="btn btn-primary" @onclick="@(async () => await editor.JsEditor.ZoomAtNodes())">ZoomAt Nodes</button>
-            <button class="btn btn-primary" @onclick="@(async () => await editor.JsEditor.EditorRef.InvokeVoidAsync("toggleIsActive"))">Toggle IsActive</button>
-            <button class="btn btn-primary" @onclick="@(async () => await editor.JsEditor.Clear())">Clear</button>
-            <button class="btn btn-primary" @onclick="@(async () => await editor.JsEditor.BackgroundEnabled.SetValue(true))">BG Enable</button>
-            <button class="btn btn-primary" @onclick="@(async () => await editor.JsEditor.BackgroundEnabled.SetValue(false))">BG Disable</button>
-            <button class="btn btn-primary" @onclick="@(async () => await editor.JsEditor.AddDockTemplate(GenerateRandomTemplate()))">Add template</button>
+            <button class="btn btn-primary" @onclick="@(async () => await editor.AddNode(GenerateRandomTemplate()))">Add Node</button>
+            <button class="btn btn-primary" @onclick="@(async () => await editor.ArrangeNodes())">Arrange</button>
+            <button class="btn btn-primary" @onclick="@(async () => await editor.ZoomAtNodes())">ZoomAt Nodes</button>
+            <button class="btn btn-primary" @onclick="@(async () => await editor.Clear())">Clear</button>
+            <button class="btn btn-primary" @onclick="@(async () => await editor.BackgroundEnabled.SetValue(true))">BG Enable</button>
+            <button class="btn btn-primary" @onclick="@(async () => await editor.BackgroundEnabled.SetValue(false))">BG Disable</button>
+            <button class="btn btn-primary" @onclick="@(async () => { await editor.AddDockTemplate(GenerateRandomTemplate()); })">Add template</button>
             <button class="btn btn-primary" @onclick="@(GC.Collect)">GC Collect</button>
             @if (NodePositionUpdatesAnchor == null)
             {
@@ -27,15 +25,14 @@
             {
                 <button class="btn btn-primary" @onclick="@(async () => await UnsubscribeFromNodeUpdates())">Unsub from node updates</button>
             }
-        </div> 
-        <div class="hstack">
-            <button class="btn btn-primary" @onclick="@(async () => await editor.JsEditor.EditorRef.InvokeVoidAsync("setMaxOutputs", 0))">Outputs: 0</button>
-            <button class="btn btn-primary" @onclick="@(async () => await editor.JsEditor.EditorRef.InvokeVoidAsync("setMaxOutputs", 1))">Outputs: 1</button>
-            <button class="btn btn-primary" @onclick="@(async () => await editor.JsEditor.EditorRef.InvokeVoidAsync("setMaxOutputs", 2))">Outputs: 2</button>
-            
-            <button class="btn btn-primary" @onclick="@(async () => await editor.JsEditor.EditorRef.InvokeVoidAsync("setMaxInputs", 0))">Inputs: 0</button>
-            <button class="btn btn-primary" @onclick="@(async () => await editor.JsEditor.EditorRef.InvokeVoidAsync("setMaxInputs", 1))">Inputs: 1</button>
-            <button class="btn btn-primary" @onclick="@(async () => await editor.JsEditor.EditorRef.InvokeVoidAsync("setMaxInputs", 2))">Inputs: 2</button>
+            @if (DockTemplateHookAnchor == null)
+            {
+                <button class="btn btn-primary" @onclick="@(async () => await HookDock())">Hook Dock</button>
+            }
+            else
+            {
+                <button class="btn btn-primary" @onclick="@(async () => await UnhookDock())">Unhook Dock</button>
+            }
         </div>
         <div>
             Selection:
@@ -78,12 +75,19 @@
         </div>
     </div>
     <div class="flex-grow-1 w-100" style="height: 85%">
-        <BlazorReteEditor @ref="editor"/>
+        <BlazorReteEditor @ref="editor" TNode="NodeParams">
+            <NodeTemplate>
+                <div style="width: 100%; height: 100%; background: #0a53be; border: 1px solid red;">
+                    @context.Id
+                    <img src="@context.ExtraParams.Url" alt=""/>
+                </div>
+            </NodeTemplate>
+        </BlazorReteEditor>
     </div>
 </div>
 
 @code {
-    private BlazorReteEditor editor;
+    private BlazorReteEditor<NodeParams> editor;
 
     public string[] SelectedNodeIds { get; private set; }
 
@@ -92,19 +96,21 @@
     public ReteConnection[] Connections { get; private set; }
 
     public Random Rng { get; } = new Random();
-    
+
     public IDisposable? NodePositionUpdatesAnchor { get; private set; }
-    
+    public IDisposable? DockTemplateHookAnchor { get; private set; }
+
     protected ReteNodeParams GenerateRandomTemplate()
     {
         return new ReteNodeParams()
         {
-            Label =  $"L{Guid.NewGuid().ToString().Substring(0, 8)}",
+            Label = $"L{Guid.NewGuid().ToString().Substring(0, 8)}",
             MaxOutputs = Rng.Next(0, 3),
             MaxInputs = Rng.Next(0, 3),
-            IsBusy = Rng.Next(0, 3) switch { 0 => null, 1 => false, 2 => true },
-            LabelPrefix = Rng.Next(0, 2) switch{ 0 => null, 1 => "P-"},
-            LabelSuffix = Rng.Next(0, 2) switch{ 0 => null, 1 => "-S"},
+            Extra = new NodeParams
+            {
+                Url = $"https://picsum.photos/{Rng.Next(15, 90)}/{Rng.Next(40, 100)}"
+            }
         };
     }
 
@@ -114,6 +120,7 @@
         {
             throw new InvalidOperationException();
         }
+
         NodePositionUpdatesAnchor?.Dispose();
         NodePositionUpdatesAnchor = null;
     }
@@ -124,6 +131,7 @@
         {
             throw new InvalidOperationException();
         }
+
         NodePositionUpdatesAnchor = editor
             .NodePositionUpdates
             .Subscribe(x =>
@@ -132,7 +140,33 @@
                 InvokeAsync(StateHasChanged);
             });
     }
+
+    protected async Task UnhookDock()
+    {
+        if (DockTemplateHookAnchor == null)
+        {
+            throw new InvalidOperationException();
+        }
+
+        DockTemplateHookAnchor?.Dispose();
+        DockTemplateHookAnchor = null;
+    }
     
+    protected async Task HookDock()
+    {
+        if (DockTemplateHookAnchor != null)
+        {
+            throw new InvalidOperationException();
+        }
+
+        DockTemplateHookAnchor = editor
+            .WhenTemplateCreated
+            .Subscribe(x =>
+            {
+                x.NodeParams = GenerateRandomTemplate();
+            });
+    }
+
     protected async Task ListenToConnections()
     {
         var connections = await editor.GetConnectionsCache();

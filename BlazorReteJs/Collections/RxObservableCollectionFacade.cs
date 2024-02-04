@@ -5,7 +5,7 @@ using Microsoft.JSInterop;
 
 namespace BlazorReteJs.Collections;
 
-public sealed class RxObservableCollectionFacade<T> : IObservableList<T>
+public sealed class RxObservableCollectionFacade<T> : IObservableList<T> where T : notnull
 {
     private readonly IJSObjectReference collectionReference;
     private readonly CompositeDisposable anchors = new();
@@ -27,12 +27,12 @@ public sealed class RxObservableCollectionFacade<T> : IObservableList<T>
         anchors.Dispose();
     }
 
-    public IObservable<IChangeSet<T>> Connect(Func<T, bool> predicate = null)
+    public IObservable<IChangeSet<T>> Connect(Func<T, bool>? predicate = null)
     {
         return itemsSource.Connect(predicate);
     }
 
-    public IObservable<IChangeSet<T>> Preview(Func<T, bool> predicate = null)
+    public IObservable<IChangeSet<T>> Preview(Func<T, bool>? predicate = null)
     {
         return itemsSource.Preview(predicate);
     }

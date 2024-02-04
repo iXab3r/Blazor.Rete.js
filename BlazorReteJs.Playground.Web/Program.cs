@@ -1,23 +1,27 @@
-using BlazorReteJs.Playground;
-using Microsoft.AspNetCore.Components.Web;
-using Microsoft.Extensions.Hosting;
-using Index = BlazorReteJs.Playground.Pages.Index;
+using BlazorReteJs.Scaffolding;
 
-var builder = Host.CreateDefaultBuilder().ConfigureWebHostDefaults(webBuilder =>
-{
-    webBuilder
-        .ConfigureServices(ConfigureServices)
-        .Configure((context, applicationBuilder) => Configure(context.HostingEnvironment, applicationBuilder))
-        .UseStaticWebAssets();
-});
+var builder = Host
+    .CreateDefaultBuilder()
+    .ConfigureWebHostDefaults(webBuilder =>
+    {
+        webBuilder
+            .ConfigureServices(ConfigureServices)
+            .Configure((context, applicationBuilder) => Configure(context.HostingEnvironment, applicationBuilder))
+            .UseStaticWebAssets();
+    });
 
 await builder.Build().RunAsync();
-
+return;
 
 void ConfigureServices(IServiceCollection services)
 {
     services.AddRazorPages();
-    services.AddServerSideBlazor();
+    services.AddServerSideBlazor(options =>
+    {
+        options.DetailedErrors = true;
+        options.RootComponents.AddBlazorReteJs();
+    });
+    services.AddBlazorReteJs();
 }
 
 void Configure(IWebHostEnvironment env, IApplicationBuilder app)
@@ -31,7 +35,7 @@ void Configure(IWebHostEnvironment env, IApplicationBuilder app)
         app.UseExceptionHandler("/Error");
         app.UseHsts();
     }
-
+    
     app.UseHttpsRedirection();
     app.UseStaticFiles();
 

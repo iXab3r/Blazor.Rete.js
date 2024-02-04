@@ -8,18 +8,6 @@ public readonly record struct ReteNodeParams
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? Label { get; init; }
     
-    [JsonPropertyName("labelPrefix")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-    public string? LabelPrefix { get; init; }
-    
-    [JsonPropertyName("labelSuffix")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-    public string? LabelSuffix { get; init; }
-    
-    [JsonPropertyName("body")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-    public string? Body { get; init; }
-    
     [JsonPropertyName("id")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public string? Id { get; init; }
@@ -40,11 +28,7 @@ public readonly record struct ReteNodeParams
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public float? Y { get; init; }
     
-    [JsonPropertyName("status")]
+    [JsonPropertyName("extra")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-    public ReteNodeStatus? Status { get; init; }
-    
-    [JsonPropertyName("isBusy")]
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-    public bool? IsBusy { get; init; }
+    public object? Extra { get; init; }
 }

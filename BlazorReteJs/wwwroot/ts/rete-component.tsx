@@ -10,55 +10,6 @@ export type ReteComponentProps = {
     id: string;
 };
 
-
-const ModeSwitch = styled.div`
-  position: absolute;
-  top: 1rem;
-  left: 1rem;
-  @media (max-width: 768px) {
-    top: 3.5rem;
-    left: 1rem;
-    right: 1rem;
-    text-align: center;
-  }
-`
-
-const ShapeSwitch = styled.div`
-  position: absolute;
-  bottom: 1rem;
-  right: 1rem;
-  @media (max-width: 768px) {
-    left: 1rem;
-    text-align: center;
-  }
-`
-
-const ButtonSwitch = styled.div`
-  position: absolute;
-  top: 1rem;
-  right: 1rem;
-  @media (max-width: 768px) {
-    left: 1rem;
-    text-align: center;
-  }
-`
-
-const modeOptions = [
-    { label: 'Select node\'s rectangle', value: 'rect' },
-    { label: 'Select node\'s center', value: 'center' },
-]
-
-const shapeOptions = [
-    { label: 'Lasso selection', value: 'lasso' },
-    { label: 'Marquee selection', value: 'marquee' },
-]
-
-
-const buttonOptions = [
-    { label: 'Left mouse button', value: 0 },
-    { label: 'Middle mouse button', value: 1 },
-]
-
 export default function ReteComponent(props: ReteComponentProps) {
     const [ref, editor] = useRete(createEditor);
 

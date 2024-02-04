@@ -2,19 +2,12 @@
 import {ClassicScheme, Presets, RenderEmit} from "rete-react-plugin";
 import {ReactArea2D} from "rete-react-plugin";
 import { ContextMenuExtra } from "rete-context-menu-plugin";
-import {$nodeheight, $nodewidth, $socketmargin, $socketsize} from "./vars";
+import {$nodeheight, $nodewidth} from "./vars";
 
 const reteSocket = new ClassicPreset.Socket("socket");
 
 export type Position = { x: number; y: number };
 export type Rect = { left: number; top: number; right: number; bottom: number };
-
-export enum ReteNodeStatus {
-    None,
-    Success,
-    Danger,
-    Warning,
-}
 
 export interface ReteNodePosition {
     id?: string;
@@ -28,41 +21,64 @@ export interface ReteNodeConnectionParams {
     targetNodeId: string;
 }
 
+export interface ReteNodeExtraParams {
+    
+}
+
 export interface ReteNodeParams {
     label?: string;
-    labelPrefix?: string;
-    labelSuffix?: string;
     id?: string;
     maxInputs?: number;
     maxOutputs?: number;
-    status?: ReteNodeStatus;
-    isBusy?: boolean;
-    body?: string;
     x?: number;
     y?: number;
+    width?: number;
+    height?: number;
+    extra: ReteNodeExtraParams;
 }
 
 export class ReteNode extends ClassicPreset.Node {
-    
-    width: number = $nodewidth;
-    height: number = $nodeheight;
-    status: ReteNodeStatus;
-    isBusy: boolean;
-    labelSuffix: string;
-    labelPrefix: string;
-    body: string;
     
     private readonly _inputSocket: ClassicPreset.Input<ClassicPreset.Socket>;
     private readonly _outputSocket: ClassicPreset.Output<ClassicPreset.Socket>;
     private readonly _inputKey: string = "I";
     private readonly _outputKey: string = "O";
-    
+    private readonly _editorId: string;
+
+    private _extraParams: ReteNodeExtraParams;
     private _maxOutputs: number;
     private _maxInputs: number;
+    private _width: number = $nodewidth;
+    private _height: number = $nodeheight;
 
-    constructor(nodeParams: ReteNodeParams) {
+    constructor(editorId: string, nodeParams: ReteNodeParams) {
         super(nodeParams.label);
+        this._editorId = editorId;
         this.updateParams(nodeParams);
+    }
+    
+    get extraParams(): ReteNodeExtraParams{
+        return this._extraParams;
+    }
+
+    get width() : number{
+        return this._width;
+    }
+
+    get height() : number {
+        return this._height;
+    }
+
+    set width(value: number) {
+        this._width = value;
+    }
+
+    set height(value: number) {
+        this._height = value;
+    }
+    
+    get editorId() : string{
+        return this._editorId;
     }
 
     get maxInputs() : number {
@@ -119,13 +135,9 @@ export class ReteNode extends ClassicPreset.Node {
         return {
             id: this.id,
             label: this.label,
-            labelPrefix: this.labelPrefix,
-            labelSuffix: this.labelSuffix,
-            status: this.status,
-            isBusy: this.isBusy,
-            body: this.body,
             maxInputs: this._maxInputs,
             maxOutputs: this._maxOutputs,
+            extra: this._extraParams
         };
     }
     
@@ -136,33 +148,18 @@ export class ReteNode extends ClassicPreset.Node {
             changedPropertiesCount++;
         }
 
-        if (nodeParams.body !== null && nodeParams.body !== undefined && this.body !== nodeParams.body) {
-            this.body = nodeParams.body;
-            changedPropertiesCount++;
-        }
-
         if (nodeParams.label !== null && nodeParams.label !== undefined && this.label !== nodeParams.label) {
             this.label = nodeParams.label;
             changedPropertiesCount++;
         }
 
-        if (nodeParams.labelPrefix !== null && nodeParams.labelPrefix !== undefined && this.labelPrefix !== nodeParams.labelPrefix) {
-            this.labelPrefix = nodeParams.labelPrefix;
+        if (nodeParams.width !== null && nodeParams.width !== undefined && this.width !== nodeParams.width) {
+            this.width = nodeParams.width;
             changedPropertiesCount++;
         }
 
-        if (nodeParams.labelSuffix !== null && nodeParams.labelSuffix !== undefined && this.labelSuffix !== nodeParams.labelSuffix) {
-            this.labelSuffix = nodeParams.labelSuffix;
-            changedPropertiesCount++;
-        }
-
-        if (nodeParams.isBusy !== null && nodeParams.isBusy !== undefined && this.isBusy !== nodeParams.isBusy) {
-            this.isBusy = nodeParams.isBusy;
-            changedPropertiesCount++;
-        }
-
-        if (nodeParams.status !== null && nodeParams.status !== undefined && this.status !== nodeParams.status) {
-            this.status = nodeParams.status;
+        if (nodeParams.height !== null && nodeParams.height !== undefined && this.height !== nodeParams.height) {
+            this.height = nodeParams.height;
             changedPropertiesCount++;
         }
 
@@ -175,6 +172,12 @@ export class ReteNode extends ClassicPreset.Node {
             this.maxInputs = nodeParams.maxInputs;
             changedPropertiesCount++;
         }
+
+        if (nodeParams.extra !== null && nodeParams.extra !== undefined && this._extraParams !== nodeParams.extra) {
+            this._extraParams = nodeParams.extra;
+            changedPropertiesCount++;
+        }
+        
         return changedPropertiesCount > 0;
     }
 }
@@ -187,12 +190,9 @@ export type NodeExtraData = {
     width?: number; 
     height?: number;
     scale?: number;
-    isBusy: boolean;
-    body?: string;
-    labelSuffix?: string;
-    labelPrefix?: string;
     selected: boolean;
-    status: ReteNodeStatus;
+    editorId: string;
+    extraParams: ReteNodeExtraParams;
 };
 
 export type ConnectionExtraData = { 

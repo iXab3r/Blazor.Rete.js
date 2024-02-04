@@ -1,4 +1,6 @@
-﻿const BlazorReteJsInterop = {
+﻿// noinspection JSUnusedGlobalSymbols called from .NET
+
+const BlazorReteJsInterop = {
     setObjectField: function (obj, propName, value) {
         obj[propName] = value;
     },
@@ -10,3 +12,5 @@
 
 // Attach the namespace object to the window for access
 (window as any).BlazorReteJsInterop = BlazorReteJsInterop;
+
+

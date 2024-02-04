@@ -10,34 +10,34 @@ internal sealed class ReteEditorFacade
 {
     private readonly IJSObjectReference editorRef;
 
+    private Func<ReteNodeParams, Task<ReteNodeParams>>? paramsFactory;
+
     public ReteEditorFacade(IJSObjectReference jsModule)
     {
         editorRef = jsModule ?? throw new ArgumentNullException(nameof(jsModule));
         BackgroundEnabled = new JsProperty<bool>(editorRef, nameof(BackgroundEnabled));
-        ArrangeDirection = new JsProperty<ReteArrangeDirection>(editorRef, nameof(ArrangeDirection));
-        ArrangeAlgorithm = new JsProperty<ReteArrangeAlgorithm>(editorRef, nameof(ArrangeAlgorithm));
         Readonly = new JsProperty<bool>(editorRef, nameof(Readonly));
-        ArrangeAnimate = new JsProperty<bool>(editorRef, nameof(ArrangeAnimate));
-        AutoArrange = new JsProperty<bool>(editorRef, nameof(AutoArrange));
     }
     
     public IJSObjectReference EditorRef => editorRef;
 
     public JsProperty<bool> BackgroundEnabled { get; }
     
-    public JsProperty<ReteArrangeDirection> ArrangeDirection { get; }
-    
-    public JsProperty<ReteArrangeAlgorithm> ArrangeAlgorithm { get; }
-    
-    public JsProperty<bool> AutoArrange { get; }
-    
-    public JsProperty<bool> ArrangeAnimate { get; }
-    
     public JsProperty<bool> Readonly { get; }
     
     public ValueTask AddDockTemplate(ReteNodeParams nodeParams)
     {
         return editorRef.InvokeVoidAsync("addDockTemplate", nodeParams);
+    }
+
+    public async ValueTask AddDockTemplateHook<T>(DotNetObjectReference<T> hookRef) where T : class, IReteDockTemplateHook
+    {
+        await editorRef.InvokeVoidAsync("addDockTemplateHookDotNet", hookRef);
+    }
+    
+    public async ValueTask RemoveDockTemplateHook<T>(DotNetObjectReference<T> hookRef) where T : class, IReteDockTemplateHook
+    {
+        await editorRef.InvokeVoidAsync("removeDockTemplateHookDotNet", hookRef);
     }
     
     public ValueTask<IJSObjectReference> AddNode(ReteNodeParams nodeParams) 
@@ -59,11 +59,6 @@ internal sealed class ReteEditorFacade
     {
         return editorRef.InvokeAsync<IJSObjectReference>("addConnection", connectionParams);
     }
-    
-    public ValueTask<IJSObjectReference> AddConnection(string sourceNodeId, string targetNodeId, string? connectionId = default)
-    {
-        return AddConnection(new ReteConnectionParams() {Id = connectionId, SourceNodeId = sourceNodeId, TargetNodeId = targetNodeId});
-    } 
     
     public ValueTask<bool> RemoveConnection(string connectionId) 
     {
@@ -114,16 +109,6 @@ internal sealed class ReteEditorFacade
     {
         return editorRef.InvokeVoidAsync("clear");
     }
-
-    public ValueTask Setup()
-    {
-        return editorRef.InvokeVoidAsync("setup");
-    }
-    
-    public ValueTask OrderNodes()
-    {
-        return editorRef.InvokeVoidAsync("orderNodes");
-    } 
     
     public ValueTask ArrangeNodes()
     {
@@ -168,6 +153,18 @@ internal sealed class ReteEditorFacade
         var collection = await editorRef.InvokeAsync<IJSObjectReference>("getSelectedNodesCollection");
         return new RxObservableCollectionFacade<string>(collection);
     } 
+    
+    [JSInvokable]
+    public async ValueTask<ReteNodeParams> MutateTemplateParams(ReteNodeParams initialParams)
+    {
+        if (paramsFactory == null)
+        {
+            return initialParams;
+        }
+
+        var finalParams = await paramsFactory(initialParams);
+        return finalParams;
+    }
     
     public void Dispose()
     {

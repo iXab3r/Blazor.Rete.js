@@ -1,0 +1,83 @@
+﻿@using BlazorReteJs.Services
+@using System.Text.Json
+
+@if (ComponentType != null && ComponentParameters != null)
+{
+    <DynamicComponent Type="@ComponentType" Parameters="@ComponentParameters" />
+}
+else
+{
+    <div>Not initialized</div>
+}
+
+@code {
+    [Parameter] public string? Id { get; set; }
+
+    [Parameter] public string? EditorId { get; set; }
+    
+    [Parameter] public string? Label { get; set; }
+    
+    [Parameter] public object? ExtraParams { get; set; }
+
+    [Inject] internal IBlazorReteEditorStorage? EditorStorage { get; private set; }
+    
+    public Type? ComponentType { get; private set; }
+    
+    public IDictionary<string, object>? ComponentParameters { get; private set; }
+
+    private IBlazorReteEditor? Editor { get; set; }
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        var storage = GetStorageOrThrow();
+        if (string.IsNullOrEmpty(EditorId))
+        {
+            throw new ArgumentException("EditorId must be set");
+        }
+        if (string.IsNullOrEmpty(Id))
+        {
+            throw new ArgumentException("Id must be set");
+        }
+
+        var editorId = new ReteEditorId(EditorId);
+        Editor = storage.Get(editorId);
+
+        var nodeType = Editor.GetType().GetGenericArguments().First();
+
+        object nodeParameters;
+        var extraParametersAsString = ExtraParams?.ToString();
+        if (!string.IsNullOrEmpty(extraParametersAsString))
+        {
+            var serializerOptions = new JsonSerializerOptions()
+            {
+                PropertyNameCaseInsensitive = true
+            };
+            var deserialized = JsonSerializer.Deserialize(extraParametersAsString, nodeType, serializerOptions);
+            nodeParameters = deserialized ?? throw new ArgumentException($"Failed to deserialize node parameters from string '{extraParametersAsString}'");
+        }
+        else
+        {
+            var created = Activator.CreateInstance(nodeType);
+            nodeParameters = created ?? throw new ArgumentException($"Failed to create new instance of node parameters of type {nodeType}");
+        }
+        ComponentType = typeof(BlazorReteNode<>).MakeGenericType(nodeType);
+        ComponentParameters = new Dictionary<string, object>()
+        {
+            { nameof(BlazorReteNode<object>.Id), Id },
+            { nameof(BlazorReteNode<object>.EditorId), EditorId },
+            { nameof(BlazorReteNode<object>.Label), Label ?? string.Empty },
+            { nameof(BlazorReteNode<object>.ExtraParams), nodeParameters },
+        };
+    }
+
+    private IBlazorReteEditorStorage GetStorageOrThrow()
+    {
+        if (EditorStorage == null)
+        {
+            throw new InvalidOperationException("EditorStorage is not ready yet, wait until it is loaded");
+        }
+
+        return EditorStorage;
+    }
+}

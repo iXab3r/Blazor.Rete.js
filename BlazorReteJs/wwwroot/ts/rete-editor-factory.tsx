@@ -16,12 +16,9 @@ export async function renderEditor(container: HTMLElement): Promise<ReteEditorFa
 
 export async function createEditor(container: HTMLElement) {
     console.info(`Creating Rete editor in container(id: ${container.id}): ${container}`)
-    const editorCanvas = container.querySelector<HTMLElement>("#rete-editor-canvas");
-    if (!editorCanvas){
-        throw new DOMException(`Failed to find editor canvas`); 
-    }
-    const editor = new ReteEditorFacade(editorCanvas);
-    const areaPlugin = editor.getAreaPlugin();
+   
+    const editor = new ReteEditorFacade(container);
+    const areaPlugin = editor.AreaPlugin;
     const selection = setupMouseAreaSelection(areaPlugin, {
         selected(ids) {
             editor.setSelectedNodes(ids)            
@@ -35,7 +32,7 @@ export async function createEditor(container: HTMLElement) {
         setSelectionButton(button: 0 | 1) {
             const panningButton = button ? 0 : 1
 
-            editor.getAreaPlugin().area.setDragHandler(new Drag({
+            editor.AreaPlugin.area.setDragHandler(new Drag({
                 down: e => {
                     if (e.pointerType === 'mouse' && e.button !== panningButton) return false
                     e.preventDefault()

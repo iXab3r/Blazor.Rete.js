@@ -1,7 +1,7 @@
 import {Observable} from 'rxjs';
 import {Change, ListChangeReason, ObservableCollection} from './observable-collection';
 import {DotnetObservableListener} from "./dotnet-observable-listener";
-import {DotnetObjectReference} from "../scaffolding/dotnet-object-reference";
+import {DotNetObjectReference} from "../scaffolding/dot-net-object-reference";
 
 export class RxObservableCollection<T> extends ObservableCollection<T> {
     asObservable(): Observable<Change<T>> {
@@ -19,7 +19,7 @@ export class RxObservableCollection<T> extends ObservableCollection<T> {
         });
     }
     
-    listenDotnet(listener: DotnetObjectReference) : DotnetObservableListener<Change<T>>{
+    listenDotnet(listener: DotNetObjectReference) : DotnetObservableListener<Change<T>>{
         return new DotnetObservableListener<Change<T>>(this.asObservable(), listener);
     }
 }

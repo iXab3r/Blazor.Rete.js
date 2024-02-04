@@ -1,12 +1,12 @@
 ﻿import {Observable, Subscription} from 'rxjs';
-import {DotnetObjectReference} from "../scaffolding/dotnet-object-reference";
+import {DotNetObjectReference} from "../scaffolding/dot-net-object-reference";
 import * as log from 'loglevel';
 
 export class DotnetObservableListener<T> {
     private readonly anchors: Subscription = new Subscription();
     private readonly logger: log.Logger = log.getLogger(DotnetObservableListener.name);
 
-    constructor(observable: Observable<T>, listener: DotnetObjectReference) {
+    constructor(observable: Observable<T>, listener: DotNetObjectReference) {
         this.logger.setLevel(log.levels.INFO);
         this.anchors.add(observable.subscribe(async event => {
             this.logger.debug(`Raising Observable OnNext: ${JSON.stringify(event)}`);

@@ -1,12 +1,14 @@
-﻿import {DotnetObservableListener} from "./collections/dotnet-observable-listener";
-import {DotnetObjectReference} from "./scaffolding/dotnet-object-reference";
+﻿// noinspection JSUnusedGlobalSymbols called from .NET
+
+import {DotnetObservableListener} from "./collections/dotnet-observable-listener";
+import {DotNetObjectReference} from "./scaffolding/dot-net-object-reference";
 import {Observable, Subscription} from 'rxjs';
 
 const ObservablesJsInterop = {
     createObservableListener: createObservableListener
 };
 
-function createObservableListener<T>(observable: Observable<T>, listener: DotnetObjectReference): DotnetObservableListener<T> {
+function createObservableListener<T>(observable: Observable<T>, listener: DotNetObjectReference): DotnetObservableListener<T> {
     return new DotnetObservableListener(observable, listener);
 }
 

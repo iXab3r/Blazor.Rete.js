@@ -1,4 +1,4 @@
-import {DotnetObjectReference} from "../scaffolding/dotnet-object-reference";
+import {DotNetObjectReference} from "../scaffolding/dot-net-object-reference";
 
 export enum ListChangeReason {
     Add,
