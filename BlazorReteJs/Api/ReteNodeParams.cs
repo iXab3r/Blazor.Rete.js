@@ -28,7 +28,19 @@ public readonly record struct ReteNodeParams
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public float? Y { get; init; }
     
-    [JsonPropertyName("extra")]
+    [JsonPropertyName("width")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
-    public object? Extra { get; init; }
+    public float? Width { get; init; }
+    
+    [JsonPropertyName("height")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public float? Height { get; init; }
+    
+    [JsonPropertyName("autoSize")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public ReteNodeAutoSizeMode? AutoSize { get; init; }
+    
+    [JsonPropertyName("extraParams")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public object? ExtraParams { get; init; }
 }

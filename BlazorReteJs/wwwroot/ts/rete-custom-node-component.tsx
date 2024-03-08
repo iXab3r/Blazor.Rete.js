@@ -1,7 +1,7 @@
 import * as React from "react";
 import {ClassicScheme, Presets} from "rete-react-plugin";
 import styled, {css} from "styled-components";
-import {NodeExtraData, ReteCustomNodeProps} from "./rete-editor-shared";
+import {NodeExtraData, ReteCustomNodeProps, ReteNodeAutoSizeMode} from "./rete-editor-shared";
 import {sortByIndex} from "./scaffolding/utils";
 import {useEffect, useRef} from "react";
 import {addRootComponent, ComponentParameters} from "./BlazorFacade";
@@ -17,12 +17,11 @@ export const NodeStyledComponent = styled.div<NodeExtraData & { styles?: (props:
     cursor: pointer;
     box-sizing: border-box;
     
-    width: ${(props) =>
-            Number.isFinite(props.width) ? `${props.width}px` : `${$nodewidth}px`};
-    height: ${(props) =>
-            Number.isFinite(props.height) ? `${props.height}px` : `auto`};;
+    min-width: ${(props) => `${$nodewidth}px`};
+    width: ${(props) => Number.isFinite(props.width) ? `${props.width}px` : `auto`};
+    height: ${(props) => Number.isFinite(props.height) ? `${props.height}px` : `auto`};
+    
     ${props => Number.isFinite(props.scale) ? `scale: ${props.scale};` : ''}
-
     position: relative;
     user-select: none;
     border: 1px solid #000 !important;
@@ -82,6 +81,32 @@ export const NodeStyledComponent = styled.div<NodeExtraData & { styles?: (props:
     ${(props) => props.styles && props.styles(props)}
 `;
 
+function calculateNodeDimensions(nodeExtraData: NodeExtraData): { width: number | undefined, height: number | undefined } {
+    
+    let width: number | undefined = nodeExtraData.width;
+    let height: number | undefined = nodeExtraData.height;
+
+    if (!nodeExtraData.width) {
+        throw new Error('width must be provided for the node');
+    }
+
+    if (!nodeExtraData.height) {
+        throw new Error('height must be provided for the node');
+    }
+
+    if (nodeExtraData.autoSize) {
+        if (nodeExtraData.autoSize === ReteNodeAutoSizeMode.Width || nodeExtraData.autoSize === ReteNodeAutoSizeMode.WidthAndHeight) {
+            width = undefined;
+        }
+
+        if (nodeExtraData.autoSize === ReteNodeAutoSizeMode.Height || nodeExtraData.autoSize === ReteNodeAutoSizeMode.WidthAndHeight) {
+            height = undefined;
+        }
+    }
+
+    return { width, height };
+}
+
 export function ReteCustomNodeComponent<Scheme extends ClassicScheme>(props: ReteCustomNodeProps<Scheme>) {
     const blazorNodeRef = useRef(null);
 
@@ -105,11 +130,14 @@ export function ReteCustomNodeComponent<Scheme extends ClassicScheme>(props: Ret
     const outputs = Object.entries(props.data.outputs);
     const controls = Object.entries(props.data.controls);
     const selected = props.data.selected || false;
-    const showSockets = Object.keys(props.data.inputs).length > 0 || Object.keys(props.data.outputs).length > 0;
     const {id, label, editorId} = props.data;
 
-    const height = showSockets ? props.data.height : props.data.height / 2;
-    const width = props.data.width;
+    const showSockets = Object.keys(props.data.inputs).length > 0 || Object.keys(props.data.outputs).length > 0;
+    const size = calculateNodeDimensions(props.data);
+    const actualSize = { 
+        width: size.width, 
+        height: showSockets ? size.height : size.height ? size.height / 2 : undefined 
+    };
     const scale = showSockets ? 1 : 0.75;
 
     sortByIndex(inputs);
@@ -124,9 +152,8 @@ export function ReteCustomNodeComponent<Scheme extends ClassicScheme>(props: Ret
             data-testid="node"
             editorId={editorId}
             extraParams={props.data.extraParams}
-            width={width}
-            height={height}
-        >
+            width={actualSize.width}
+            height={actualSize.height}>
             <div className="node-grid">
                 <div className="node-sockets node-sockets-top">
                     {showSockets && inputs.map(([key, input]) => input && (

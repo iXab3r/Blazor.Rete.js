@@ -9,6 +9,13 @@ const reteSocket = new ClassicPreset.Socket("socket");
 export type Position = { x: number; y: number };
 export type Rect = { left: number; top: number; right: number; bottom: number };
 
+export enum ReteNodeAutoSizeMode { 
+    None,
+    Width,
+    Height,
+    WidthAndHeight
+}
+
 export interface ReteNodePosition {
     id?: string;
     x?: number;
@@ -34,10 +41,11 @@ export interface ReteNodeParams {
     y?: number;
     width?: number;
     height?: number;
-    extra: ReteNodeExtraParams;
+    autoSize?: ReteNodeAutoSizeMode;
+    extraParams: ReteNodeExtraParams;
 }
 
-export class ReteNode extends ClassicPreset.Node {
+export class ReteNode extends ClassicPreset.Node implements ReteNodeParams{
     
     private readonly _inputSocket: ClassicPreset.Input<ClassicPreset.Socket>;
     private readonly _outputSocket: ClassicPreset.Output<ClassicPreset.Socket>;
@@ -50,11 +58,16 @@ export class ReteNode extends ClassicPreset.Node {
     private _maxInputs: number;
     private _width: number = $nodewidth;
     private _height: number = $nodeheight;
+    private _autoSize: ReteNodeAutoSizeMode;
 
     constructor(editorId: string, nodeParams: ReteNodeParams) {
         super(nodeParams.label);
         this._editorId = editorId;
         this.updateParams(nodeParams);
+    }
+    
+    get autoSize() : ReteNodeAutoSizeMode{
+        return this._autoSize;
     }
     
     get extraParams(): ReteNodeExtraParams{
@@ -137,7 +150,10 @@ export class ReteNode extends ClassicPreset.Node {
             label: this.label,
             maxInputs: this._maxInputs,
             maxOutputs: this._maxOutputs,
-            extra: this._extraParams
+            width: this._width,
+            height: this._height,
+            autoSize: this._autoSize,
+            extraParams: this._extraParams
         };
     }
     
@@ -171,10 +187,15 @@ export class ReteNode extends ClassicPreset.Node {
         if (nodeParams.maxInputs !== null && nodeParams.maxInputs !== undefined && this.maxInputs !== nodeParams.maxInputs) {
             this.maxInputs = nodeParams.maxInputs;
             changedPropertiesCount++;
+        } 
+        
+        if (nodeParams.autoSize !== null && nodeParams.autoSize !== undefined && this._autoSize !== nodeParams.autoSize) {
+            this._autoSize = nodeParams.autoSize;
+            changedPropertiesCount++;
         }
 
-        if (nodeParams.extra !== null && nodeParams.extra !== undefined && this._extraParams !== nodeParams.extra) {
-            this._extraParams = nodeParams.extra;
+        if (nodeParams.extraParams !== null && nodeParams.extraParams !== undefined && this._extraParams !== nodeParams.extraParams) {
+            this._extraParams = nodeParams.extraParams;
             changedPropertiesCount++;
         }
         
@@ -190,6 +211,7 @@ export type NodeExtraData = {
     width?: number; 
     height?: number;
     scale?: number;
+    autoSize?: ReteNodeAutoSizeMode;
     selected: boolean;
     editorId: string;
     extraParams: ReteNodeExtraParams;
