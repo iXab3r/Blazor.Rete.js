@@ -1,9 +1,11 @@
 ﻿@using BlazorReteJs
 @using BlazorReteJs.Api
 @using DynamicData
+@using Microsoft.Extensions.Logging
 @using ReactiveUI
 @page "/"
 @inject IJSRuntime JS
+@inject ILoggerFactory lf
 
 <div class="d-flex flex-column h-100">
     <div class="w-100" style="height: 15%">
@@ -107,7 +109,7 @@
             Label = $"L{Guid.NewGuid().ToString().Substring(0, 8)}",
             MaxOutputs = Rng.Next(0, 3),
             MaxInputs = Rng.Next(0, 3),
-            Extra = new NodeParams
+            ExtraParams = new NodeParams
             {
                 Url = $"https://picsum.photos/{Rng.Next(15, 90)}/{Rng.Next(40, 100)}"
             }

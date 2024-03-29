@@ -17,10 +17,6 @@
     </ItemGroup>
 
     <ItemGroup>
-      <AdditionalFiles Include="Pages\Index.razor" />
-    </ItemGroup>
-
-    <ItemGroup>
       <Folder Include="wwwroot\" />
     </ItemGroup>
 

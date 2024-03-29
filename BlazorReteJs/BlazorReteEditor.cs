@@ -23,30 +23,11 @@ public partial class BlazorReteEditor<TNode> : IAsyncDisposable, IBlazorReteEdit
     private IDisposable? storageAnchor;
 
     private readonly ISubject<Unit> whenLoaded = new ReplaySubject<Unit>(1);
+    private readonly Lazy<ILogger> logSupplier;
 
-    [Parameter] public RenderFragment<BlazorReteNode<TNode>>? NodeTemplate { get; set; }
-
-    public IObservable<Unit> WhenLoaded => whenLoaded;
-
-    public JsProperty<bool> BackgroundEnabled => GetFacadeOrThrow().BackgroundEnabled;
-
-    public JsProperty<bool> Readonly => GetFacadeOrThrow().Readonly;
-
-    public IObservable<ReteNodePosition[]> NodePositionUpdates { get; }
-
-    [Inject] protected IJSRuntime? JsRuntime { get; private set; }
-
-    [Inject] internal IBlazorReteEditorStorage? EditorStorage { get; private set; }
-
-    ReteEditorId IBlazorReteEditor.Id { get; } = new($"BlazorReteEditor-{Guid.NewGuid()}");
-
-    private ReteEditorId Id => ((IBlazorReteEditor)this).Id;
-    
-    private ILogger Log { get; }
-
-    public BlazorReteEditor(ILoggerFactory loggerFactory)
+    public BlazorReteEditor()
     {
-        Log = loggerFactory.CreateLogger(GetType());
+        logSupplier = new Lazy<ILogger>(() => (LoggerFactory ?? throw new InvalidOperationException("Logger factory is not injected")).CreateLogger(GetType()));
         NodePositionUpdates = WhenLoaded
             .SelectMany(async _ =>
             {
@@ -56,7 +37,7 @@ public partial class BlazorReteEditor<TNode> : IAsyncDisposable, IBlazorReteEdit
             })
             .Switch();
 
-        WhenTemplateCreate = WhenLoaded
+        WhenTemplateCreated = WhenLoaded
             .Select(_ =>
             {
                 return Observable.Create<ReteDockTemplateCreateEventArgs>(async (observer) =>
@@ -84,8 +65,34 @@ public partial class BlazorReteEditor<TNode> : IAsyncDisposable, IBlazorReteEdit
             .RefCount();
     }
     
-    public IObservable<ReteDockTemplateCreateEventArgs> WhenTemplateCreate { get; }
+    [Inject] 
+    public ILoggerFactory? LoggerFactory { get; init; }
 
+    [Inject] 
+    protected IJSRuntime? JsRuntime { get; init; }
+
+    [Inject] 
+    internal IBlazorReteEditorStorage? EditorStorage { get; init; }
+
+    [Parameter] 
+    public RenderFragment<BlazorReteNode<TNode>>? NodeTemplate { get; set; }
+
+    public IObservable<ReteDockTemplateCreateEventArgs> WhenTemplateCreated { get; }
+    
+    public IObservable<Unit> WhenLoaded => whenLoaded;
+
+    public JsProperty<bool> BackgroundEnabled => GetFacadeOrThrow().BackgroundEnabled;
+
+    public JsProperty<bool> Readonly => GetFacadeOrThrow().Readonly;
+
+    public IObservable<ReteNodePosition[]> NodePositionUpdates { get; }
+
+    private ReteEditorId Id => ((IBlazorReteEditor)this).Id;
+
+    private ILogger Log => logSupplier.Value;
+
+    ReteEditorId IBlazorReteEditor.Id { get; } = new($"BlazorReteEditor-{Guid.NewGuid()}");
+    
     protected override async Task OnInitializedAsync()
     {
         await base.OnInitializedAsync();
@@ -320,33 +327,9 @@ public partial class BlazorReteEditor<TNode> : IAsyncDisposable, IBlazorReteEdit
         return EditorStorage;
     }
 
-    public async ValueTask DisposeAsync()
+    public ValueTask DisposeAsync()
     {
-        return;
-        
-        if (storageAnchor != null)
-        {
-            storageAnchor.Dispose();
-        }
-
-        if (reteEditorFacade != null)
-        {
-            reteEditorFacade.Dispose();
-        }
-
-        if (blazorReteJsInterop != null)
-        {
-            await blazorReteJsInterop.DisposeAsync();
-        }
-
-        if (observablesJsInterop != null)
-        {
-            await observablesJsInterop.DisposeAsync();
-        }
-
-        if (reteModule != null)
-        {
-            await reteModule.DisposeAsync();
-        }
+        //FIXME Dispose Rete resources
+        return ValueTask.CompletedTask;
     }
 }
