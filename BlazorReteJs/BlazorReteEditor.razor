@@ -4,4 +4,6 @@
     <link href="_content/BlazorReteJs/BlazorReteJs.bundle.scp.css" rel="stylesheet"/>
 </HeadContent>
 
-<div @ref="editorRef" id="@(Id)" class="rete-editor-container"></div>
+<div @ref="editorRef"
+     @oncontextmenu="@(EventUtil.AsNonRenderingEventHandler<MouseEventArgs>(HandleContextMenu))"
+     id="@(Id)" class="rete-editor-container"></div>

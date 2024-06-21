@@ -8,6 +8,7 @@ using BlazorReteJs.Scaffolding;
 using BlazorReteJs.Services;
 using DynamicData;
 using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Web;
 using Microsoft.Extensions.Logging;
 using Microsoft.JSInterop;
 
@@ -90,6 +91,9 @@ public partial class BlazorReteEditor<TNode> : IAsyncDisposable, IBlazorReteEdit
     private ReteEditorId Id => ((IBlazorReteEditor)this).Id;
 
     private ILogger Log => logSupplier.Value;
+    
+    [Parameter]
+    public EventCallback<MouseEventArgs> OnContextMenu { get; set; }
 
     ReteEditorId IBlazorReteEditor.Id { get; } = new($"BlazorReteEditor-{Guid.NewGuid()}");
     
@@ -294,6 +298,14 @@ public partial class BlazorReteEditor<TNode> : IAsyncDisposable, IBlazorReteEdit
     public async Task<bool> RemoveNode(ReteNode node)
     {
         return await GetFacadeOrThrow().RemoveNode(node.Id);
+    }
+    
+    private async Task HandleContextMenu(MouseEventArgs args)
+    {
+        if (OnContextMenu.HasDelegate)
+        {
+            await OnContextMenu.InvokeAsync(args);
+        }
     }
 
     private ReteEditorFacade GetFacadeOrThrow()
