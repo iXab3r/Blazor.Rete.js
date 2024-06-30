@@ -121,9 +121,20 @@ public partial class BlazorReteEditor<TNode> : IAsyncDisposable, IBlazorReteEdit
         whenLoaded.OnNext(Unit.Default);
     }
 
+    public async Task<ReteRectangle> GetViewportBounds()
+    {
+        var bounds = await GetFacadeOrThrow().GetViewportBounds();
+        return bounds;
+    }
+
+    public async Task<RetePoint> GetMousePositionInViewport()
+    {
+        var position = await GetFacadeOrThrow().GetMousePositionInViewport();
+        return position;
+    }
+
     public async Task<IObservableList<string>> GetNodes()
     {
-        GetFacadeOrThrow();
         var collection = await GetFacadeOrThrow().GetNodesCollection();
         return collection;
     }

@@ -78,6 +78,16 @@ internal sealed class ReteEditorFacade
     public ValueTask<IJSObjectReference> GetConnectionById(string connectionId) 
     {
         return editorRef.InvokeAsync<IJSObjectReference>("getConnectionById", connectionId);
+    }
+    
+    public ValueTask<ReteRectangle> GetViewportBounds() 
+    {
+        return editorRef.InvokeAsync<ReteRectangle>("getViewportBounds");
+    }
+    
+    public ValueTask<RetePoint> GetMousePositionInViewport() 
+    {
+        return editorRef.InvokeAsync<RetePoint>("getMousePositionInViewport");
     } 
     
     public ValueTask RemoveSelectedNodes() 

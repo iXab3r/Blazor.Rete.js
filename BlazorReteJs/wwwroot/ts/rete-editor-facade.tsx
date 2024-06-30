@@ -2,12 +2,12 @@
 import {NodeEditor} from "rete";
 import {AreaExtensions, AreaPlugin} from "rete-area-plugin";
 import {
-    AreaExtra,
+    AreaExtra, Rect,
     ReteConnection, ReteConnectionSchemes,
     ReteNode,
     ReteNodeConnectionParams,
     ReteNodeParams,
-    ReteNodePosition,
+    ReteNodePosition, RetePoint, ReteRectangle,
     Schemes,
     SelectableNodesAdapter
 } from './rete-editor-shared'
@@ -38,7 +38,7 @@ import log from "loglevel";
 import JsObjectReference = DotNet.JsObjectReference;
 
 // noinspection JSUnusedGlobalSymbols Used from Blazor
-export class ReteEditorFacade  {
+export class ReteEditorFacade {
     private readonly _editor: NodeEditor<Schemes>;
     private readonly _areaPlugin: AreaPlugin<Schemes, AreaExtra>;
     private readonly _renderPlugin: ReactPlugin<Schemes, AreaExtra>;
@@ -55,21 +55,21 @@ export class ReteEditorFacade  {
     private readonly _selector: Selector<any>;
     private readonly _container: HTMLElement;
     private readonly _editorId: string;
-    
+
     private _backgroundEnabled: boolean = false;
     private _readonly: boolean = false;
 
     constructor(container: HTMLElement) {
         this._editorId = container.id;
-        if (!this._editorId){
+        if (!this._editorId) {
             throw new DOMException(`Container must have a proper globally unique id set, but was undefined in element ${container}`);
         }
         this._container = container;
         const editorCanvas = container.querySelector<HTMLElement>("#rete-editor-canvas");
-        if (!editorCanvas){
+        if (!editorCanvas) {
             throw new DOMException(`Failed to find editor canvas inside ${container} (id: ${container.id})`);
         }
-        
+
         this._editor = new NodeEditor<Schemes>();
         this._areaPlugin = new AreaPlugin<Schemes, AreaExtra>(editorCanvas);
         this._connectionPlugin = new ConnectionPlugin<Schemes, AreaExtra>();
@@ -102,7 +102,7 @@ export class ReteEditorFacade  {
 
         const accumulating = AreaExtensions.accumulateOnCtrl()
         this._selector = AreaExtensions.selector()
-        this._selectableNodes = AreaExtensions.selectableNodes(this._areaPlugin, this._selector, { accumulating: accumulating });
+        this._selectableNodes = AreaExtensions.selectableNodes(this._areaPlugin, this._selector, {accumulating: accumulating});
 
         this._renderPlugin.addPreset(Presets.classic.setup({
             customize: {
@@ -129,23 +129,23 @@ export class ReteEditorFacade  {
         }));
 
         const path = new ConnectionPathPlugin({
-            transformer: () => Transformers.classic({ vertical: true })
+            transformer: () => Transformers.classic({vertical: true})
         })
         this._renderPlugin.use(path)
 
         // disable zoom on double-click
         this._areaPlugin.addPipe(context => {
-            if (context.type ===  'zoom' && context.data.source === 'dblclick') return
+            if (context.type === 'zoom' && context.data.source === 'dblclick') return
             return context
         })
 
         this._eventsListener = new ReteEditorListener(this._editor, this._areaPlugin);
-        
+
         AreaExtensions.simpleNodesOrder(this._areaPlugin);
         useMagneticConnectionForEditor(this._editor, this._connectionPlugin);
 
         this._dockPlugin = new AsyncDockPlugin<Schemes>();
-        this._dockPlugin.addPreset(verticalDockSetup({ area: this._areaPlugin }));
+        this._dockPlugin.addPreset(verticalDockSetup({area: this._areaPlugin}));
         this._areaPlugin.use(this._dockPlugin);
         this._dockManager = new ReteEditorDockManager<Schemes>(this._dockPlugin, nodeParams => this.createNode(nodeParams));
 
@@ -159,32 +159,64 @@ export class ReteEditorFacade  {
             ).subscribe())
     }
 
-    public select(nodeId: string, accumulate: boolean){
+    public select(nodeId: string, accumulate: boolean) {
         return this._selectableNodes.select(nodeId, accumulate);
     }
-    
-    public get AreaPlugin(): AreaPlugin<Schemes, AreaExtra>{
+
+    public get AreaPlugin(): AreaPlugin<Schemes, AreaExtra> {
         return this._areaPlugin;
     }
 
-    public get DockPlugin(): AsyncDockPlugin<Schemes>{
+    public get DockPlugin(): AsyncDockPlugin<Schemes> {
         return this._dockPlugin;
     }
 
-    public getSelectedNodesCollection(): RxObservableCollection<string>{
+    public getSelectedNodesCollection(): RxObservableCollection<string> {
         return this._eventsListener.getSelectedNodes();
     }
-    
-    public getNodesCollection(): RxObservableCollection<string>{
+
+    public getNodesCollection(): RxObservableCollection<string> {
         return this._eventsListener.getNodes();
-    } 
-    
-    public getConnectionsCollection(): RxObservableCollection<string>{
+    }
+
+    public getConnectionsCollection(): RxObservableCollection<string> {
         return this._eventsListener.getConnections();
     }
 
     public getNodePositionUpdatesObservable(bufferTimeInMs?: number, includeTranslated?: boolean): Observable<ReteNodePosition[]> {
         return this._eventsListener.getNodePositionUpdates(bufferTimeInMs, includeTranslated);
+    }
+
+    public getMousePositionInViewport(): RetePoint {
+        const area = this._areaPlugin;
+        const pointerPosition = area.area.pointer;
+        
+        return {
+            x: pointerPosition.x,
+            y: pointerPosition.y,
+        };
+    }
+
+    public getViewportBounds(): ReteRectangle {
+        const area = this._areaPlugin;
+
+        const {x, y, k} = area.area.transform;
+        const offsetX = x;
+        const offsetY = y;
+        const zoomFactor = k;
+        
+        const box = area.container.getBoundingClientRect();
+        const width = box.width / zoomFactor;
+        const height = box.height / zoomFactor;
+        const left = box.left / zoomFactor - offsetX / zoomFactor;
+        const top = box.top / zoomFactor - offsetY / zoomFactor;
+
+        return {
+            x: left,
+            y: top,
+            width: width,
+            height: height,
+        };
     }
 
     public setBackgroundEnabled(value: boolean) {
@@ -240,7 +272,7 @@ export class ReteEditorFacade  {
     }
 
     public async updateNodes(nodes: ReteNodeParams[]): Promise<void> {
-        if (nodes.length <= 0){
+        if (nodes.length <= 0) {
             return;
         }
         console.info(`Updating ${nodes.length} nodes`);
@@ -250,7 +282,7 @@ export class ReteEditorFacade  {
     }
 
     public async updateNode(nodeParams: ReteNodeParams, silent: boolean = false): Promise<void> {
-        if (!silent){
+        if (!silent) {
             console.info(`Updating node: ${JSON.stringify(nodeParams)}`);
         }
         // Check if id is provided in nodeParams
@@ -265,16 +297,16 @@ export class ReteEditorFacade  {
 
         node.updateParams(nodeParams);
         if (nodeParams.x !== null && nodeParams.x !== undefined && nodeParams.y !== null && nodeParams.y !== undefined) {
-            await this._areaPlugin.translate(node.id, { x: nodeParams.x, y: nodeParams.y })
+            await this._areaPlugin.translate(node.id, {x: nodeParams.x, y: nodeParams.y})
         }
 
         await this._areaPlugin.update('node', nodeParams.id);
     }
 
-    public async addConnections(connections: ReteNodeConnectionParams[]): Promise<ReteConnection<ReteNode>[]>{
+    public async addConnections(connections: ReteNodeConnectionParams[]): Promise<ReteConnection<ReteNode>[]> {
         console.info(`Adding ${connections.length} new connection`)
         let result: ReteConnection<ReteNode>[] = [];
-        for (let connectionParams of connections){
+        for (let connectionParams of connections) {
             const node = await this.addConnectionOrThrow(connectionParams);
             result.push(node);
         }
@@ -283,7 +315,7 @@ export class ReteEditorFacade  {
     }
 
     public async addConnection(connectionParams: ReteNodeConnectionParams, silent: boolean = false): Promise<ReteConnection<ReteNode>> {
-        if (!silent){
+        if (!silent) {
             console.info(`Adding new connection: ${JSON.stringify(connectionParams)}`);
         }
         return await this.addConnectionOrThrow(connectionParams);
@@ -292,7 +324,7 @@ export class ReteEditorFacade  {
     public async addNodes(nodes: ReteNodeParams[]): Promise<ReteNode[]> {
         console.info(`Adding new ${nodes.length} nodes`);
         let result: ReteNode[] = [];
-        for (let nodeParams of nodes){
+        for (let nodeParams of nodes) {
             const node = await this.addNodeOrThrow(nodeParams);
             result.push(node);
         }
@@ -300,12 +332,12 @@ export class ReteEditorFacade  {
     }
 
     public async addNode(nodeParams: ReteNodeParams, silent: boolean = false): Promise<ReteNode> {
-        if (!silent){
+        if (!silent) {
             console.info(`Adding new node: ${JSON.stringify(nodeParams)}`);
         }
-        
+
         let node = await this.addNodeOrThrow(nodeParams);
-        if (!silent){
+        if (!silent) {
             console.info(`Added new node: ${JSON.stringify(node)}`);
         }
         return node;
@@ -318,7 +350,7 @@ export class ReteEditorFacade  {
             await this.removeNode(node.id);
         }
     }
-    
+
     public async removeNode(nodeId: string): Promise<boolean> {
         console.info(`Removing node by Id: ${nodeId}`)
         const connections = this._editor.getConnections().filter(x => x.source === nodeId || x.target === nodeId);
@@ -361,10 +393,10 @@ export class ReteEditorFacade  {
     public findNodeById(id: string): ReteNode {
         return this._editor.getNode(id);
     }
-    
+
     public getNodeById(id: string): ReteNode {
         const result = this.findNodeById(id);
-        if (!result){
+        if (!result) {
             throw new Error(`Node with ID ${id} not found`);
         }
         return result;
@@ -373,10 +405,10 @@ export class ReteEditorFacade  {
     public findConnectionById(id: string): ReteConnectionSchemes {
         return this._editor.getConnection(id);
     }
-    
+
     public getConnectionById(id: string): ReteConnectionSchemes {
         const result = this.findConnectionById(id);
-        if (!result){
+        if (!result) {
             throw new Error(`Connection with ID ${id} not found`);
         }
         return result;
@@ -389,17 +421,17 @@ export class ReteEditorFacade  {
     public getSelectedNodes() {
         return this.getNodes().filter(x => x.selected);
     }
-    
+
     public clearSelectedNodes() {
         const selected = this._selector.entities;
         console.info(`Clearing selection, current: ${JSON.stringify(selected)}`);
         this._selector.unselectAll();
     }
-    
+
     public setSelectedNodes(nodeIds: string[]) {
         const [first, ...rest] = nodeIds
         console.info(`Selecting nodes by Id: ${JSON.stringify(nodeIds)}`);
-        
+
         this._selector.unselectAll()
         if (first) {
             this._selectableNodes.select(first, false);
@@ -431,12 +463,12 @@ export class ReteEditorFacade  {
         this._areaPlugin?.destroy();
     }
 
-    public async addNodesDotNet(nodes: ReteNodeParams[]): Promise<JsObjectReference[]>{
+    public async addNodesDotNet(nodes: ReteNodeParams[]): Promise<JsObjectReference[]> {
         const result = await this.addNodes(nodes);
         return result.map(x => DotNet.createJSObjectReference(x));
     }
 
-    public async addConnectionsDotNet(connections: ReteNodeConnectionParams[]): Promise<JsObjectReference[]>{
+    public async addConnectionsDotNet(connections: ReteNodeConnectionParams[]): Promise<JsObjectReference[]> {
         const result = await this.addConnections(connections);
         return result.map(x => DotNet.createJSObjectReference(x));
     }
@@ -447,20 +479,20 @@ export class ReteEditorFacade  {
         }
         this._dockManager.addTemplate(nodeParams);
     }
-    
-    public addDockTemplateHookDotNet(hookRef: DotNetObjectReference){
+
+    public addDockTemplateHookDotNet(hookRef: DotNetObjectReference) {
         this._dockManager.addHook(hookRef);
     }
 
-    public removeDockTemplateHookDotNet(hookRef: DotNetObjectReference){
+    public removeDockTemplateHookDotNet(hookRef: DotNetObjectReference) {
         this._dockManager.removeHook(hookRef);
     }
 
-    private createNode(params: ReteNodeParams): ReteNode{
+    private createNode(params: ReteNodeParams): ReteNode {
         return new ReteNode(this._editorId, params);
     }
 
-    private async addConnectionOrThrow(connectionParams: ReteNodeConnectionParams): Promise<ReteConnection<ReteNode>>{
+    private async addConnectionOrThrow(connectionParams: ReteNodeConnectionParams): Promise<ReteConnection<ReteNode>> {
         const sourceNode = this.getNodeById(connectionParams.sourceNodeId);
         const targetNode = this.getNodeById(connectionParams.targetNodeId);
 
@@ -474,12 +506,12 @@ export class ReteEditorFacade  {
             throw `Failed to add connection ${JSON.stringify(connectionParams)}`;
         }
     }
-    
+
     private async addNodeOrThrow(nodeParams: ReteNodeParams): Promise<ReteNode> {
         if (nodeParams.id) {
             const existingNode = this.findNodeById(nodeParams.id);
 
-            if (existingNode){
+            if (existingNode) {
                 console.warn(`Failed to add node with ID ${nodeParams.id} - it already exists: ${JSON.stringify(existingNode)}`);
                 throw new Error(`Node with ID ${nodeParams.id} already exists`);
             }
@@ -487,7 +519,7 @@ export class ReteEditorFacade  {
         const node = this.createNode(nodeParams);
         if (await this._editor.addNode(node)) {
             if (nodeParams.x !== null && nodeParams.x !== undefined && nodeParams.y !== null && nodeParams.y !== undefined) {
-                const nodePosition = { x: nodeParams.x, y: nodeParams.y };
+                const nodePosition = {x: nodeParams.x, y: nodeParams.y};
                 await this._areaPlugin.translate(node.id, nodePosition)
             }
 
@@ -496,12 +528,12 @@ export class ReteEditorFacade  {
             throw `Failed to add node ${nodeParams.id}`;
         }
     }
-    
-    private getNodesForOperation(){
+
+    private getNodesForOperation() {
         let selectedNodes = this.getSelectedNodes();
-        if (selectedNodes.length <= 0){
+        if (selectedNodes.length <= 0) {
             return this.getNodes();
-        } else{
+        } else {
             return selectedNodes;
         }
     }

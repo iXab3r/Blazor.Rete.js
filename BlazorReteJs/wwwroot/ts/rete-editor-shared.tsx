@@ -8,6 +8,8 @@ const reteSocket = new ClassicPreset.Socket("socket");
 
 export type Position = { x: number; y: number };
 export type Rect = { left: number; top: number; right: number; bottom: number };
+export type ReteRectangle = { x: number; y: number; width: number; height: number };
+export type RetePoint = { x: number; y: number; };
 
 export enum ReteNodeAutoSizeMode { 
     None,
