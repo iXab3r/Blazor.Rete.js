@@ -15,6 +15,10 @@ export async function renderEditor(container: HTMLElement): Promise<ReteEditorFa
 }
 
 export async function createEditor(container: HTMLElement) {
+    if (!container) {
+        throw new Error(`Rete Editor container is not specified`);
+    }
+    
     console.info(`Creating Rete editor in container(id: ${container.id}): ${container}`)
    
     const editor = new ReteEditorFacade(container);
@@ -48,6 +52,10 @@ export async function createEditor(container: HTMLElement) {
 }
 
 function getEditor(container: HTMLElement): ReteEditorFacade {
+    if (!container) {
+        throw new Error(`Rete Editor container is not specified`);
+    }
+    
     const editorWrapper = editors[container.id];
     if (editorWrapper) {
         return editorWrapper;
@@ -55,6 +63,9 @@ function getEditor(container: HTMLElement): ReteEditorFacade {
 }
 
 async function createEditorElement(container: HTMLElement): Promise<void> {
+    if (!container) {
+        throw new Error(`Rete Editor container is not specified`);
+    }
     console.info(`Creating React Rete container inside(id: ${container.id}): ${container}`);
     const root = createRoot(container!);
     root.render(
@@ -65,6 +76,10 @@ async function createEditorElement(container: HTMLElement): Promise<void> {
 }
 
 async function retrieveEditor(container: HTMLElement): Promise<ReteEditorFacade> {
+    if (!container) {
+        throw new Error(`Rete Editor container is not specified`);
+    }
+    
     return new Promise((resolve, reject) => {
         let totalWaitTime = 0;
         const interval = 10;  // Polling interval

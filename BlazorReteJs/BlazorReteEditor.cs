@@ -1,5 +1,4 @@
 ﻿using System.Reactive;
-using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using BlazorReteJs.Api;
@@ -16,19 +15,24 @@ namespace BlazorReteJs;
 
 public partial class BlazorReteEditor<TNode> : IAsyncDisposable, IBlazorReteEditor<TNode>
 {
-    private ElementReference editorRef;
-    private IJSObjectReference? reteModule;
-    private IJSObjectReference? blazorReteJsInterop;
-    private IJSObjectReference? observablesJsInterop;
+    private ElementReference? editorRef;
     private ReteEditorFacade? reteEditorFacade;
     private IDisposable? storageAnchor;
-
+    
+    private readonly Lazy<Task<IJSObjectReference>> reteModuleTask;
+    private readonly Lazy<Task<IJSObjectReference>> blazorReteJsInteropTask;
+    private readonly Lazy<Task<IJSObjectReference>> observablesJsInteropTask;
     private readonly ISubject<Unit> whenLoaded = new ReplaySubject<Unit>(1);
     private readonly Lazy<ILogger> logSupplier;
 
     public BlazorReteEditor()
     {
         logSupplier = new Lazy<ILogger>(() => (LoggerFactory ?? throw new InvalidOperationException("Logger factory is not injected")).CreateLogger(GetType()));
+
+        blazorReteJsInteropTask = new Lazy<Task<IJSObjectReference>>(() => GetJSRuntimeOrThrow().ImportModule("./_content/BlazorReteJs/js/BlazorReteJsInterop.js").AsTask());
+        observablesJsInteropTask = new Lazy<Task<IJSObjectReference>>(() => GetJSRuntimeOrThrow().ImportModule("./_content/BlazorReteJs/js/ObservablesJsInterop.js").AsTask());
+        reteModuleTask = new Lazy<Task<IJSObjectReference>>(() => GetJSRuntimeOrThrow().ImportModule("./_content/BlazorReteJs/js/rete-editor-factory.js").AsTask());
+        
         NodePositionUpdates = WhenLoaded
             .SelectMany(async _ =>
             {
@@ -105,20 +109,31 @@ public partial class BlazorReteEditor<TNode> : IAsyncDisposable, IBlazorReteEdit
 
     private async Task HandleLoaded()
     {
-        blazorReteJsInterop = (await GetJSRuntimeOrThrow().InvokeAsync<IJSObjectReference>("import", "./_content/BlazorReteJs/js/BlazorReteJsInterop.js"))
-                              ?? throw new FileLoadException("Failed to load BlazorReteJsInterop JS module");
-        observablesJsInterop = (await GetJSRuntimeOrThrow().InvokeAsync<IJSObjectReference>("import", "./_content/BlazorReteJs/js/ObservablesJsInterop.js"))
-                               ?? throw new FileLoadException("Failed to load ObservablesJsInterop JS module");
-        reteModule = (await GetJSRuntimeOrThrow().InvokeAsync<IJSObjectReference>("import", "./_content/BlazorReteJs/js/rete-editor-factory.js"))
-                     ?? throw new FileLoadException("Failed to load Rete JS module");
 
-        var editorReference = await reteModule.InvokeAsync<IJSObjectReference>("renderEditor", editorRef)
-                              ?? throw new ArgumentException("Failed to initialize Rete.js editor");
+
         storageAnchor = GetStorageOrThrow().Add(this);
+    }
 
-        reteEditorFacade = new ReteEditorFacade(editorReference);
-        await BackgroundEnabled.SetValue(true);
-        whenLoaded.OnNext(Unit.Default);
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await base.OnAfterRenderAsync(firstRender);
+
+        if (firstRender)
+        {
+            if (editorRef == null)
+            {
+                throw new InvalidOperationException("Editor ref must be set before initialization");
+            }
+            
+            Log.LogDebug($"Initializing new Rete editor in {editorRef}");
+            var reteModule = await reteModuleTask.Value;
+            var editorReference = await reteModule.InvokeAsync<IJSObjectReference>("renderEditor", editorRef)
+                                  ?? throw new ArgumentException("Failed to initialize Rete.js editor");
+
+            reteEditorFacade = new ReteEditorFacade(editorReference);
+            await BackgroundEnabled.SetValue(true);
+            whenLoaded.OnNext(Unit.Default);
+        }
     }
 
     public async Task<ReteRectangle> GetViewportBounds()
