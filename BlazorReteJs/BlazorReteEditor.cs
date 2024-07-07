@@ -98,6 +98,9 @@ public partial class BlazorReteEditor<TNode> : IAsyncDisposable, IBlazorReteEdit
     
     [Parameter]
     public EventCallback<MouseEventArgs> OnContextMenu { get; set; }
+    
+    [Parameter]
+    public EventCallback<DragEventArgs> OnDrop { get; set; }
 
     ReteEditorId IBlazorReteEditor.Id { get; } = new($"BlazorReteEditor-{Guid.NewGuid()}");
     
@@ -127,6 +130,9 @@ public partial class BlazorReteEditor<TNode> : IAsyncDisposable, IBlazorReteEdit
             
             Log.LogDebug($"Initializing new Rete editor in {editorRef}");
             var reteModule = await reteModuleTask.Value;
+            var blazorInteropModule = await blazorReteJsInteropTask.Value;
+            var observablesModules = await observablesJsInteropTask.Value;
+            
             var editorReference = await reteModule.InvokeAsync<IJSObjectReference>("renderEditor", editorRef)
                                   ?? throw new ArgumentException("Failed to initialize Rete.js editor");
 
@@ -139,6 +145,12 @@ public partial class BlazorReteEditor<TNode> : IAsyncDisposable, IBlazorReteEdit
     public async Task<ReteRectangle> GetViewportBounds()
     {
         var bounds = await GetFacadeOrThrow().GetViewportBounds();
+        return bounds;
+    } 
+    
+    public async Task<ReteRectangle> GetClientBounds()
+    {
+        var bounds = await GetFacadeOrThrow().GetClientBounds();
         return bounds;
     }
 
@@ -324,6 +336,14 @@ public partial class BlazorReteEditor<TNode> : IAsyncDisposable, IBlazorReteEdit
     public async Task<bool> RemoveNode(ReteNode node)
     {
         return await GetFacadeOrThrow().RemoveNode(node.Id);
+    }
+    
+    private async Task HandleOnDrop(DragEventArgs args)
+    {
+        if (OnDrop.HasDelegate)
+        {
+            await OnDrop.InvokeAsync(args);
+        }
     }
     
     private async Task HandleContextMenu(MouseEventArgs args)

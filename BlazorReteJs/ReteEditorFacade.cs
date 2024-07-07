@@ -85,6 +85,11 @@ internal sealed class ReteEditorFacade
         return editorRef.InvokeAsync<ReteRectangle>("getViewportBounds");
     }
     
+    public ValueTask<ReteRectangle> GetClientBounds() 
+    {
+        return editorRef.InvokeAsync<ReteRectangle>("getClientBounds");
+    }
+    
     public ValueTask<RetePoint> GetMousePositionInViewport() 
     {
         return editorRef.InvokeAsync<RetePoint>("getMousePositionInViewport");

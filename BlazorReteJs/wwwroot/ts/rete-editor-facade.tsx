@@ -197,6 +197,17 @@ export class ReteEditorFacade {
         };
     }
 
+    public getClientBounds(): ReteRectangle {
+        const area = this._areaPlugin;
+        const box = area.container.getBoundingClientRect();
+        return {
+            x: box.left,
+            y: box.top,
+            width: box.width,
+            height: box.height,
+        };
+    }
+    
     public getViewportBounds(): ReteRectangle {
         const area = this._areaPlugin;
 
@@ -208,8 +219,8 @@ export class ReteEditorFacade {
         const box = area.container.getBoundingClientRect();
         const width = box.width / zoomFactor;
         const height = box.height / zoomFactor;
-        const left = box.left / zoomFactor - offsetX / zoomFactor;
-        const top = box.top / zoomFactor - offsetY / zoomFactor;
+        const left = - offsetX / zoomFactor;
+        const top = - offsetY / zoomFactor;
 
         return {
             x: left,
