@@ -10,7 +10,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="DynamicData" Version="8.4.1" />
+        <PackageReference Include="DynamicData" Version="8.0.2" />
         <PackageReference Include="Microsoft.AspNetCore.Components.CustomElements" Version="7.0.0" />
         <PackageReference Include="Microsoft.TypeScript.MSBuild" Version="5.2.2">
             <PrivateAssets>all</PrivateAssets>
