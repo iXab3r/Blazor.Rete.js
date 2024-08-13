@@ -151,22 +151,22 @@ internal sealed class ReteEditorFacade
         return observableReference;
     }
     
-    public async ValueTask<IObservableList<string>> GetNodesCollection()
+    public async ValueTask<IObservableCache<string, string>> GetNodesCollection()
     {
         var collection = await editorRef.InvokeAsync<IJSObjectReference>("getNodesCollection");
-        return new RxObservableCollectionFacade<string>(collection);
+        return new JsObservableCacheFacade<string, string>(collection, x => x);
     }
     
-    public async ValueTask<IObservableList<string>> GetConnectionsCollection()
+    public async ValueTask<IObservableCache<string, string>> GetConnectionsCollection()
     {
         var collection = await editorRef.InvokeAsync<IJSObjectReference>("getConnectionsCollection");
-        return new RxObservableCollectionFacade<string>(collection);
+        return new JsObservableCacheFacade<string, string>(collection, x => x);
     }
     
-    public async ValueTask<IObservableList<string>> GetSelectedNodesCollection()
+    public async ValueTask<IObservableCache<string, string>> GetSelectedNodesCollection()
     {
         var collection = await editorRef.InvokeAsync<IJSObjectReference>("getSelectedNodesCollection");
-        return new RxObservableCollectionFacade<string>(collection);
+        return new JsObservableCacheFacade<string, string>(collection, x => x);
     } 
     
     [JSInvokable]

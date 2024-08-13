@@ -160,7 +160,7 @@ public partial class BlazorReteEditor<TNode> : IAsyncDisposable, IBlazorReteEdit
         return position;
     }
 
-    public async Task<IObservableList<string>> GetNodes()
+    public async Task<IObservableCache<string, string>> GetNodes()
     {
         var collection = await GetFacadeOrThrow().GetNodesCollection();
         return collection;
@@ -187,11 +187,11 @@ public partial class BlazorReteEditor<TNode> : IAsyncDisposable, IBlazorReteEdit
                 }
             })
             .Filter(x => x != null!)
-            .AddKey(x => x.Id)
+            .ChangeKey(x => x.Id)
             .AsObservableCache();
     }
 
-    public async Task<IObservableList<string>> GetConnections()
+    public async Task<IObservableCache<string, string>> GetConnections()
     {
         var collection = await GetFacadeOrThrow().GetConnectionsCollection();
         return collection;
@@ -216,11 +216,11 @@ public partial class BlazorReteEditor<TNode> : IAsyncDisposable, IBlazorReteEdit
                 }
             })
             .Filter(x => x != null!)
-            .AddKey(x => x.Id)
+            .ChangeKey(x => x.Id)
             .AsObservableCache();
     }
 
-    public async Task<IObservableList<string>> GetSelectedNodes()
+    public async Task<IObservableCache<string, string>> GetSelectedNodes()
     {
         return await GetFacadeOrThrow().GetSelectedNodesCollection();
     }

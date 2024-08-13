@@ -5,13 +5,14 @@ using Microsoft.JSInterop;
 
 namespace BlazorReteJs.Collections;
 
-public sealed class RxObservableCollectionFacade<T> : IObservableList<T> where T : notnull
+[Obsolete("IObservableList does not handle concurrency very well, which conflicts with async nature of .NET <> JS interactions, so should not be used. Use JsObservableCacheFacade instead")]
+internal sealed class JsObservableListFacade<T> : IObservableList<T> where T : notnull
 {
     private readonly IJSObjectReference collectionReference;
     private readonly CompositeDisposable anchors = new();
     private readonly IObservableList<T> itemsSource;
 
-    public RxObservableCollectionFacade(IJSObjectReference collectionReference)
+    public JsObservableListFacade(IJSObjectReference collectionReference)
     {
         this.collectionReference = collectionReference;
         var listener = JsObservableListenerFacade<JsChange<T>>.CreateObservableUsingFactoryMethod(collectionReference, "listenDotnet");

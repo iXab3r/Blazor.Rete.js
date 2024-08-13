@@ -9,7 +9,7 @@ public static class JsCollectionsToDynamicDataExtensions
         return new RangeChange<T>(change.Items, change.Index ?? -1);
     }
     
-    public static ItemChange<T> ToItemChange<T>(this JsItemChange<T> change)
+    public static ItemChange<T> ToItemChange<T>(this JsItemChange<T> change) where T : notnull
     {
         if (change.Previous.HasValue)
         {
@@ -21,7 +21,7 @@ public static class JsCollectionsToDynamicDataExtensions
         }
     }
 
-    public static Change<T> ToChange<T>(this JsChange<T> change)
+    public static Change<T> ToChange<T>(this JsChange<T> change) where T : notnull
     {
         if (change.Type == ChangeType.Item)
         {
