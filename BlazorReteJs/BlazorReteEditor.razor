@@ -8,4 +8,6 @@
      @oncontextmenu="@(EventUtil.AsNonRenderingEventHandler<MouseEventArgs>(HandleContextMenu))"
      @ondrop="@(EventUtil.AsNonRenderingEventHandler<DragEventArgs>(HandleOnDrop))"
      @ondrop:preventDefault
-     id="@(Id)" class="rete-editor-container"></div>
+     id="@(Id)" class="rete-editor-container @Class" style="@Style"
+     @attributes="AdditionalAttributes"
+     ></div>

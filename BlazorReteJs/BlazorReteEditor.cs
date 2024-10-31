@@ -81,6 +81,15 @@ public partial class BlazorReteEditor<TNode> : IAsyncDisposable, IBlazorReteEdit
 
     [Parameter] 
     public RenderFragment<BlazorReteNode<TNode>>? NodeTemplate { get; set; }
+    
+    [Parameter]
+    public string Class  { get; set; }
+    
+    [Parameter]
+    public string Style  { get; set; }
+    
+    [Parameter(CaptureUnmatchedValues = true)]
+    public Dictionary<string, object>? AdditionalAttributes  { get; set; }
 
     public IObservable<ReteDockTemplateCreateEventArgs> WhenTemplateCreated { get; }
     
@@ -93,7 +102,7 @@ public partial class BlazorReteEditor<TNode> : IAsyncDisposable, IBlazorReteEdit
     public IObservable<ReteNodePosition[]> NodePositionUpdates { get; }
 
     private ReteEditorId Id => ((IBlazorReteEditor)this).Id;
-
+    
     private ILogger Log => logSupplier.Value;
     
     [Parameter]
