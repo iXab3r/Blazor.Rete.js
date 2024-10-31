@@ -230,6 +230,16 @@ public partial class BlazorReteEditor<TNode> : IAsyncDisposable, IBlazorReteEdit
         await GetFacadeOrThrow().SetSelectedNodes(nodesIds.ToArray());
     }
 
+    public async ValueTask SelectNode(string nodeId)
+    {
+        await GetFacadeOrThrow().SelectNode(nodeId);
+    } 
+    
+    public async ValueTask DeselectNode(string nodeId)
+    {
+        await GetFacadeOrThrow().DeselectNode(nodeId);
+    } 
+    
     public async Task ClearSelectedNodes()
     {
         await GetFacadeOrThrow().ClearSelectedNodes();

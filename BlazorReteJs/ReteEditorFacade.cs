@@ -135,6 +135,16 @@ internal sealed class ReteEditorFacade
         return editorRef.InvokeVoidAsync("zoomAtNodes");
     }
     
+    public async ValueTask SelectNode(string nodeId)
+    {
+        await editorRef.InvokeVoidAsync("selectNode", nodeId);
+    } 
+    
+    public async ValueTask DeselectNode(string nodeId)
+    {
+        await editorRef.InvokeVoidAsync("deselectNode", nodeId);
+    } 
+    
     public async ValueTask SetSelectedNodes(IReadOnlyList<string> nodeIds)
     {
         await editorRef.InvokeVoidAsync("setSelectedNodes", nodeIds);

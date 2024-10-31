@@ -451,6 +451,16 @@ export class ReteEditorFacade {
             this._selectableNodes.select(id, true);
         }
     }
+    
+    public selectNode(nodeId: string){
+        console.info(`Selecting node by Id: ${nodeId}`);
+        this._selectableNodes.select(nodeId, true);
+    }
+
+    public deselectNode(nodeId: string){
+        console.info(`Deselecting node by Id: ${nodeId}`);
+        this._selectableNodes.unselect(nodeId);
+    }
 
     public getSelectedNodesIds() {
         return this.getSelectedNodes().map(x => x.id);
