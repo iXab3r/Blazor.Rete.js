@@ -1,4 +1,5 @@
 ﻿using System.Reactive;
+using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using BlazorReteJs.Api;
@@ -78,7 +79,10 @@ public partial class BlazorReteEditor<TNode> : IAsyncDisposable, IBlazorReteEdit
 
     [Inject] 
     internal IBlazorReteEditorStorage? EditorStorage { get; init; }
-
+    
+    [Inject] 
+    internal IBlazorReteComponentRegistrator? ComponentRegistrator { get; init; }
+    
     [Parameter] 
     public RenderFragment<BlazorReteNode<TNode>>? NodeTemplate { get; set; }
     
@@ -112,6 +116,8 @@ public partial class BlazorReteEditor<TNode> : IAsyncDisposable, IBlazorReteEdit
     public EventCallback<DragEventArgs> OnDrop { get; set; }
 
     ReteEditorId IBlazorReteEditor.Id { get; } = new($"BlazorReteEditor-{Guid.NewGuid()}");
+
+    protected CompositeDisposable Anchors { get; } = new();
     
     protected override async Task OnInitializedAsync()
     {
@@ -121,9 +127,7 @@ public partial class BlazorReteEditor<TNode> : IAsyncDisposable, IBlazorReteEdit
 
     private async Task HandleLoaded()
     {
-
-
-        storageAnchor = GetStorageOrThrow().Add(this);
+        Anchors.Add(GetStorageOrThrow().Add(this));
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -138,15 +142,33 @@ public partial class BlazorReteEditor<TNode> : IAsyncDisposable, IBlazorReteEdit
             }
             
             Log.LogDebug($"Initializing new Rete editor in {editorRef}");
-            var reteModule = await reteModuleTask.Value;
-            var blazorInteropModule = await blazorReteJsInteropTask.Value;
-            var observablesModules = await observablesJsInteropTask.Value;
-            
-            var editorReference = await reteModule.InvokeAsync<IJSObjectReference>("renderEditor", editorRef)
-                                  ?? throw new ArgumentException("Failed to initialize Rete.js editor");
+            try
+            {
+                //there is an inherent race condition in initialization code - there is a chance that the component will be unmounted while loading
+                var reteModule = await reteModuleTask.Value;
+                var blazorInteropModule = await blazorReteJsInteropTask.Value;
+                var observablesModules = await observablesJsInteropTask.Value;
 
-            reteEditorFacade = new ReteEditorFacade(editorReference);
-            await BackgroundEnabled.SetValue(true);
+                var editorReference = await reteModule.InvokeAsync<IJSObjectReference>("renderEditor", editorRef)
+                                      ?? throw new ArgumentException("Failed to initialize Rete.js editor");
+
+                reteEditorFacade = new ReteEditorFacade(editorReference);
+                await BackgroundEnabled.SetValue(true);
+            }
+            catch (Exception e)
+            {
+                if (Anchors.IsDisposed || 
+                    e is ObjectDisposedException ||
+                    e is OperationCanceledException || 
+                    e is JSDisconnectedException)
+                {
+                    //editor was disposed, ignore
+                    return;
+                }
+
+                throw;
+            }
+            
             whenLoaded.OnNext(Unit.Default);
         }
     }
@@ -407,6 +429,7 @@ public partial class BlazorReteEditor<TNode> : IAsyncDisposable, IBlazorReteEdit
     public ValueTask DisposeAsync()
     {
         //FIXME Dispose Rete resources
+        Anchors.Dispose();
         return ValueTask.CompletedTask;
     }
 }

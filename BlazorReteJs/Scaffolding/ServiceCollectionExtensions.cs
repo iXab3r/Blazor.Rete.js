@@ -9,5 +9,6 @@ public static class ServiceCollectionExtensions
     {
         //FIXME Maybe make it Scoped?
         serviceCollection.AddSingleton<IBlazorReteEditorStorage, BlazorReteEditorStorage>();
+        serviceCollection.AddScoped<IBlazorReteComponentRegistrator, BlazorReteComponentRegistrator>();
     }
 }
