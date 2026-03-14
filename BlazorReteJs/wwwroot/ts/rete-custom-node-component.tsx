@@ -4,7 +4,7 @@ import styled, {css} from "styled-components";
 import {NodeExtraData, ReteCustomNodeProps, ReteNodeAutoSizeMode} from "./rete-editor-shared";
 import {sortByIndex} from "./scaffolding/utils";
 import {useEffect, useRef} from "react";
-import {addRootComponent, ComponentParameters} from "./BlazorFacade";
+import {addRootComponent, ComponentParameters, IDynamicRootComponent} from "./BlazorFacade";
 import {$nodewidth} from "./vars";
 
 const {RefSocket} = Presets.classic;
@@ -108,23 +108,63 @@ function calculateNodeDimensions(nodeExtraData: NodeExtraData): { width: number 
 }
 
 export function ReteCustomNodeComponent<Scheme extends ClassicScheme>(props: ReteCustomNodeProps<Scheme>) {
-    const blazorNodeRef = useRef(null);
+    const blazorNodeRef = useRef<HTMLSpanElement | null>(null);
+    const rootComponentRef = useRef<IDynamicRootComponent | null>(null);
 
-    const initializeBlazorComponent = async () => {
+    const createBlazorComponentParameters = (): ComponentParameters => {
+        const host = props.data.blazorHost;
+        const includeDefaultNodeParameters = host?.includeDefaultNodeParameters ?? true;
+        const parameters: Record<string, unknown> = {};
+
+        if (includeDefaultNodeParameters) {
+            parameters["Id"] = props.data.id;
+            parameters["EditorId"] = props.data.editorId;
+            parameters["ExtraParams"] = props.data.extraParams;
+            parameters["Label"] = props.data.label;
+        }
+
+        if (host?.parameters) {
+            Object.assign(parameters, host.parameters);
+        }
+
+        return parameters;
+    };
+
+    const initializeBlazorComponent = async (disposedRef: { current: boolean }) => {
         const nodeElement = blazorNodeRef.current;
         if (nodeElement) {
-            const blazorComponentParameters: ComponentParameters = [];
-            blazorComponentParameters["Id"] = props.data.id;
-            blazorComponentParameters["EditorId"] = props.data.editorId;
-            blazorComponentParameters["ExtraParams"] = props.data.extraParams;
-            blazorComponentParameters["Label"] = props.data.label;
-            await addRootComponent(nodeElement, 'blazor-rete-node', blazorComponentParameters);
+            const componentIdentifier = props.data.blazorHost?.componentIdentifier ?? 'blazor-rete-node';
+            const rootComponent = await addRootComponent(nodeElement, componentIdentifier, createBlazorComponentParameters());
+            if (disposedRef.current) {
+                await rootComponent.dispose();
+                return;
+            }
+            rootComponentRef.current = rootComponent;
         }
     };
 
     useEffect(() => {
-        initializeBlazorComponent();
+        const disposedRef = { current: false };
+
+        initializeBlazorComponent(disposedRef);
+        return () => {
+            disposedRef.current = true;
+            const rootComponent = rootComponentRef.current;
+            rootComponentRef.current = null;
+            if (rootComponent) {
+                rootComponent.dispose().catch(console.error);
+            }
+        };
     }, []);
+
+    useEffect(() => {
+        const rootComponent = rootComponentRef.current;
+        if (!rootComponent) {
+            return;
+        }
+
+        rootComponent.setParameters(createBlazorComponentParameters());
+    }, [props.data.id, props.data.editorId, props.data.label, props.data.extraParams, props.data.blazorHost]);
 
     const inputs = Object.entries(props.data.inputs);
     const outputs = Object.entries(props.data.outputs);

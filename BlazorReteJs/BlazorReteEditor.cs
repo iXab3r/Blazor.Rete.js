@@ -2,6 +2,7 @@
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
+using System.Text.Json;
 using BlazorReteJs.Api;
 using BlazorReteJs.Collections;
 using BlazorReteJs.Scaffolding;
@@ -19,6 +20,7 @@ public partial class BlazorReteEditor<TNode> : IAsyncDisposable, IBlazorReteEdit
     private ElementReference? editorRef;
     private ReteEditorFacade? reteEditorFacade;
     private IDisposable? storageAnchor;
+    private ReteNodeHostTemplateHook<TNode>? nodeHostTemplateHook;
     
     private readonly Lazy<Task<IJSObjectReference>> reteModuleTask;
     private readonly Lazy<Task<IJSObjectReference>> blazorReteJsInteropTask;
@@ -81,7 +83,7 @@ public partial class BlazorReteEditor<TNode> : IAsyncDisposable, IBlazorReteEdit
     internal IBlazorReteEditorStorage? EditorStorage { get; init; }
     
     [Inject] 
-    internal IBlazorReteComponentRegistrator? ComponentRegistrator { get; init; }
+    internal IBlazorReteNodeHostStrategy? NodeHostStrategy { get; init; }
     
     [Parameter] 
     public RenderFragment<BlazorReteNode<TNode>>? NodeTemplate { get; set; }
@@ -153,6 +155,9 @@ public partial class BlazorReteEditor<TNode> : IAsyncDisposable, IBlazorReteEdit
                                       ?? throw new ArgumentException("Failed to initialize Rete.js editor");
 
                 reteEditorFacade = new ReteEditorFacade(editorReference);
+                nodeHostTemplateHook = await ReteNodeHostTemplateHook<TNode>.Create(
+                    reteEditorFacade,
+                    nodeParams => CreateHostedNodeParams(nodeParams, BlazorReteNodeHostKind.Node, replaceExistingHost: true));
                 await BackgroundEnabled.SetValue(true);
             }
             catch (Exception e)
@@ -294,7 +299,7 @@ public partial class BlazorReteEditor<TNode> : IAsyncDisposable, IBlazorReteEdit
     
     public async Task AddDockTemplate(ReteNodeParams nodeParams)
     {
-        await GetFacadeOrThrow().AddDockTemplate(nodeParams);
+        await GetFacadeOrThrow().AddDockTemplate(CreateHostedNodeParams(nodeParams, BlazorReteNodeHostKind.DockTemplate));
     }
 
     public async Task<ReteConnection[]> AddConnections(params ReteConnectionParams[] connectionParams)
@@ -331,14 +336,15 @@ public partial class BlazorReteEditor<TNode> : IAsyncDisposable, IBlazorReteEdit
 
     public async Task<ReteNode> AddNode(ReteNodeParams nodeParams)
     {
-        var jsNode = await GetFacadeOrThrow().AddNode(nodeParams);
+        var hostedNodeParams = CreateHostedNodeParams(nodeParams, BlazorReteNodeHostKind.Node);
+        var jsNode = await GetFacadeOrThrow().AddNode(hostedNodeParams);
         var csNode = 
-            string .IsNullOrEmpty(nodeParams.Id) 
+            string .IsNullOrEmpty(hostedNodeParams.Id) 
                 ? await ReteNode.FromJsNode(GetJSRuntimeOrThrow(), jsNode)
-                : ReteNode.FromJsNode(GetJSRuntimeOrThrow(), jsNode, nodeParams.Id);
-        if (!string.IsNullOrEmpty(nodeParams.Id) && !string.Equals(csNode.Id, nodeParams.Id))
+                : ReteNode.FromJsNode(GetJSRuntimeOrThrow(), jsNode, hostedNodeParams.Id);
+        if (!string.IsNullOrEmpty(hostedNodeParams.Id) && !string.Equals(csNode.Id, hostedNodeParams.Id))
         {
-            throw new ArgumentException($"Failed to create node with Id {nodeParams.Id}, result: {csNode}", nameof(nodeParams.Id));
+            throw new ArgumentException($"Failed to create node with Id {hostedNodeParams.Id}, result: {csNode}", nameof(nodeParams.Id));
         }
 
         return csNode;
@@ -346,14 +352,17 @@ public partial class BlazorReteEditor<TNode> : IAsyncDisposable, IBlazorReteEdit
 
     public async Task<IReadOnlyList<ReteNode>> AddNodes(params ReteNodeParams[] nodeParams)
     {
-        var jsNodes = await GetFacadeOrThrow().AddNodes(nodeParams);
+        var hostedNodeParams = nodeParams
+            .Select(x => CreateHostedNodeParams(x, BlazorReteNodeHostKind.Node))
+            .ToArray();
+        var jsNodes = await GetFacadeOrThrow().AddNodes(hostedNodeParams);
 
-        if (jsNodes.Length != nodeParams.Length)
+        if (jsNodes.Length != hostedNodeParams.Length)
         {
-            throw new InvalidOperationException($"Something is wrong - expected {nodeParams.Length} JS nodes, got {jsNodes.Length}");
+            throw new InvalidOperationException($"Something is wrong - expected {hostedNodeParams.Length} JS nodes, got {jsNodes.Length}");
         }
 
-        var result = jsNodes.Zip(nodeParams)
+        var result = jsNodes.Zip(hostedNodeParams)
             .Select(x => ReteNode.FromJsNode(GetJSRuntimeOrThrow(), x.First, x.Second.Id!))
             .ToArray();
         return result;
@@ -415,6 +424,68 @@ public partial class BlazorReteEditor<TNode> : IAsyncDisposable, IBlazorReteEdit
         return JsRuntime;
     }
 
+    private ReteNodeParams CreateHostedNodeParams(
+        ReteNodeParams nodeParams,
+        BlazorReteNodeHostKind hostKind,
+        bool replaceExistingHost = false)
+    {
+        if (!replaceExistingHost && nodeParams.BlazorHost.HasValue)
+        {
+            return nodeParams;
+        }
+
+        var hostStrategy = GetNodeHostStrategyOrThrow();
+        var extraParams = ConvertExtraParams(nodeParams.ExtraParams);
+        var hostContext = new BlazorReteNodeHostContext<TNode>
+        {
+            EditorId = Id,
+            NodeId = nodeParams.Id,
+            Label = nodeParams.Label,
+            ExtraParams = extraParams,
+            HostKind = hostKind
+        };
+
+        return nodeParams with
+        {
+            BlazorHost = hostStrategy.CreateHost(hostContext)
+        };
+    }
+
+    private IBlazorReteNodeHostStrategy GetNodeHostStrategyOrThrow()
+    {
+        if (NodeHostStrategy == null)
+        {
+            throw new InvalidOperationException("NodeHostStrategy is not ready yet, wait until it is loaded");
+        }
+
+        return NodeHostStrategy;
+    }
+
+    private static TNode? ConvertExtraParams(object? extraParams)
+    {
+        if (extraParams == null)
+        {
+            return default;
+        }
+
+        if (extraParams is TNode typed)
+        {
+            return typed;
+        }
+
+        var serializerOptions = new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true
+        };
+        var serialized = extraParams switch
+        {
+            JsonElement jsonElement => jsonElement.GetRawText(),
+            string jsonString => jsonString,
+            _ => JsonSerializer.Serialize(extraParams, serializerOptions)
+        };
+
+        return JsonSerializer.Deserialize<TNode>(serialized, serializerOptions);
+    }
 
     private IBlazorReteEditorStorage GetStorageOrThrow()
     {
@@ -426,10 +497,14 @@ public partial class BlazorReteEditor<TNode> : IAsyncDisposable, IBlazorReteEdit
         return EditorStorage;
     }
 
-    public ValueTask DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
         //FIXME Dispose Rete resources
         Anchors.Dispose();
-        return ValueTask.CompletedTask;
+        if (nodeHostTemplateHook != null)
+        {
+            await nodeHostTemplateHook.DisposeAsync();
+            nodeHostTemplateHook = null;
+        }
     }
 }

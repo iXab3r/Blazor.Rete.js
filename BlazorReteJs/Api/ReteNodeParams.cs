@@ -43,4 +43,8 @@ public readonly record struct ReteNodeParams
     [JsonPropertyName("extraParams")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public object? ExtraParams { get; init; }
+
+    [JsonPropertyName("blazorHost")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public BlazorReteNodeHostDescriptor? BlazorHost { get; init; }
 }

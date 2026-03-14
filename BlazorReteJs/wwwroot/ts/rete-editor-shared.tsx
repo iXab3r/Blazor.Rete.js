@@ -34,6 +34,12 @@ export interface ReteNodeExtraParams {
     
 }
 
+export interface ReteBlazorHostDescriptor {
+    componentIdentifier?: string;
+    includeDefaultNodeParameters?: boolean;
+    parameters?: Record<string, unknown>;
+}
+
 export interface ReteNodeParams {
     label?: string;
     id?: string;
@@ -45,6 +51,7 @@ export interface ReteNodeParams {
     height?: number;
     autoSize?: ReteNodeAutoSizeMode;
     extraParams: ReteNodeExtraParams;
+    blazorHost?: ReteBlazorHostDescriptor;
 }
 
 export class ReteNode extends ClassicPreset.Node implements ReteNodeParams{
@@ -61,6 +68,7 @@ export class ReteNode extends ClassicPreset.Node implements ReteNodeParams{
     private _width: number = $nodewidth;
     private _height: number = $nodeheight;
     private _autoSize: ReteNodeAutoSizeMode;
+    private _blazorHost?: ReteBlazorHostDescriptor;
 
     constructor(editorId: string, nodeParams: ReteNodeParams) {
         super(nodeParams.label);
@@ -94,6 +102,10 @@ export class ReteNode extends ClassicPreset.Node implements ReteNodeParams{
     
     get editorId() : string{
         return this._editorId;
+    }
+
+    get blazorHost(): ReteBlazorHostDescriptor | undefined {
+        return this._blazorHost;
     }
 
     get maxInputs() : number {
@@ -155,7 +167,8 @@ export class ReteNode extends ClassicPreset.Node implements ReteNodeParams{
             width: this._width,
             height: this._height,
             autoSize: this._autoSize,
-            extraParams: this._extraParams
+            extraParams: this._extraParams,
+            blazorHost: this._blazorHost
         };
     }
     
@@ -198,6 +211,11 @@ export class ReteNode extends ClassicPreset.Node implements ReteNodeParams{
 
         if (nodeParams.extraParams !== null && nodeParams.extraParams !== undefined && this._extraParams !== nodeParams.extraParams) {
             this._extraParams = nodeParams.extraParams;
+            changedPropertiesCount++;
+        }
+
+        if (nodeParams.blazorHost !== null && nodeParams.blazorHost !== undefined && this._blazorHost !== nodeParams.blazorHost) {
+            this._blazorHost = nodeParams.blazorHost;
             changedPropertiesCount++;
         }
         
