@@ -25,9 +25,13 @@ export interface ReteNodePosition {
 }
 
 export interface ReteNodeConnectionParams {
-    connectionId: string;
+    id: string;
     sourceNodeId: string; 
+    sourcePinId: string;
     targetNodeId: string;
+    targetPinId: string;
+    family?: string;
+    order?: number;
 }
 
 export interface ReteNodeExtraParams {
@@ -58,8 +62,8 @@ export class ReteNode extends ClassicPreset.Node implements ReteNodeParams{
     
     private readonly _inputSocket: ClassicPreset.Input<ClassicPreset.Socket>;
     private readonly _outputSocket: ClassicPreset.Output<ClassicPreset.Socket>;
-    private readonly _inputKey: string = "I";
-    private readonly _outputKey: string = "O";
+    private readonly _inputKey: string = "route-in";
+    private readonly _outputKey: string = "route-out";
     private readonly _editorId: string;
 
     private _extraParams: ReteNodeExtraParams;

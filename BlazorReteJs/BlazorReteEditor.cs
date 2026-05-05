@@ -325,7 +325,14 @@ public partial class BlazorReteEditor<TNode> : IAsyncDisposable, IBlazorReteEdit
 
     public Task<ReteConnection> AddConnection(ReteNode source, ReteNode target, string? connectionId = default)
     {
-        return AddConnection(new ReteConnectionParams() {Id = connectionId, SourceNodeId = source.Id, TargetNodeId = target.Id});
+        return AddConnection(new ReteConnectionParams()
+        {
+            Id = connectionId,
+            SourceNodeId = source.Id,
+            SourcePinId = "route-out",
+            TargetNodeId = target.Id,
+            TargetPinId = "route-in"
+        });
     }
 
     public async Task<ReteNode> GetNode(string nodeId)

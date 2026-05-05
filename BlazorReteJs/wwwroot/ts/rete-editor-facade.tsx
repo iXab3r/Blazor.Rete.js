@@ -517,9 +517,13 @@ export class ReteEditorFacade {
         const sourceNode = this.getNodeById(connectionParams.sourceNodeId);
         const targetNode = this.getNodeById(connectionParams.targetNodeId);
 
-        const connection = new ReteConnection(sourceNode, sourceNode.outputKey, targetNode, targetNode.inputKey);
-        if (connectionParams.connectionId) {
-            connection.id = connectionParams.connectionId;
+        const connection = new ReteConnection(
+            sourceNode,
+            connectionParams.sourcePinId ?? sourceNode.outputKey,
+            targetNode,
+            connectionParams.targetPinId ?? targetNode.inputKey);
+        if (connectionParams.id) {
+            connection.id = connectionParams.id;
         }
         if (await this._editor.addConnection(connection)) {
             return connection;
