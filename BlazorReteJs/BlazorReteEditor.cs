@@ -209,28 +209,67 @@ public partial class BlazorReteEditor<TNode> : IAsyncDisposable, IBlazorReteEdit
         var nodes = await GetConnections();
         return nodes
             .Connect()
-            .TransformAsync(async connectionId =>
+            .Do(changes =>
             {
-                try
+                foreach (var change in changes)
                 {
-                    var jsConnection = await GetFacadeOrThrow().GetConnectionById(connectionId).ConfigureAwait(true);
-                    return await ReteConnection.FromJsConnection(GetJSRuntimeOrThrow(), jsConnection).ConfigureAwait(true);
-                }
-                catch (Exception e)
-                {
-                    Log.LogWarning(e, "Failed to resolve connection by Id {ConnectionId}", connectionId);
-                    return null!;
+                    Log.LogDebug(
+                        "Rete connection id cache change: Reason={Reason}, Current={ConnectionId}, Previous={PreviousConnectionId}",
+                        change.Reason,
+                        change.Current,
+                        change.Previous.HasValue ? change.Previous.Value : null);
                 }
             })
+            .TransformAsync(TryResolveConnectionById)
             .Filter(x => x != null!)
             .ChangeKey(x => x.Id)
             .AsObservableCache();
+    }
+
+    private async Task<ReteConnection?> TryResolveConnectionById(string connectionId)
+    {
+        const int maxAttempts = 5;
+        var retryDelay = TimeSpan.FromMilliseconds(50);
+
+        for (var attempt = 1; attempt <= maxAttempts; attempt++)
+        {
+            try
+            {
+                var jsConnection = await GetFacadeOrThrow().GetConnectionById(connectionId).ConfigureAwait(true);
+                return await ReteConnection.FromJsConnection(GetJSRuntimeOrThrow(), jsConnection).ConfigureAwait(true);
+            }
+            catch (Exception e) when (attempt < maxAttempts)
+            {
+                Log.LogDebug(e, "Retrying Rete connection lookup for {ConnectionId}, attempt {Attempt}/{MaxAttempts}", connectionId, attempt, maxAttempts);
+                await Task.Delay(retryDelay).ConfigureAwait(true);
+            }
+            catch (Exception e)
+            {
+                Log.LogWarning(e, "Failed to resolve Rete connection by Id {ConnectionId} after {Attempts} attempts", connectionId, maxAttempts);
+                return null;
+            }
+        }
+
+        Log.LogWarning("Failed to resolve Rete connection by Id {ConnectionId} after {Attempts} attempts", connectionId, maxAttempts);
+        return null;
     }
 
     public async Task<IObservableCache<string, string>> GetConnections()
     {
         var collection = await GetFacadeOrThrow().GetConnectionsCollection();
         return collection;
+    }
+
+    public async Task<IReadOnlyList<ReteConnection>> GetConnectionsSnapshot()
+    {
+        var jsConnections = await GetFacadeOrThrow().GetConnectionsSnapshot();
+        var result = new List<ReteConnection>(jsConnections.Length);
+        foreach (var jsConnection in jsConnections)
+        {
+            result.Add(await ReteConnection.FromJsConnection(GetJSRuntimeOrThrow(), jsConnection).ConfigureAwait(true));
+        }
+
+        return result;
     }
 
     public async Task<IObservableCache<ReteNode, string>> GetNodesCache()

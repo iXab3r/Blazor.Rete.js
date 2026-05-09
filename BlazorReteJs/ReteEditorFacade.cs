@@ -54,6 +54,11 @@ internal sealed class ReteEditorFacade
     {
         return editorRef.InvokeAsync<IJSObjectReference[]>("addConnectionsDotNet", connectionParams);
     }
+
+    public ValueTask<IJSObjectReference[]> GetConnectionsSnapshot()
+    {
+        return editorRef.InvokeAsync<IJSObjectReference[]>("getConnectionsDotNet");
+    }
     
     public ValueTask<IJSObjectReference> AddConnection(ReteConnectionParams connectionParams)
     {

@@ -10,7 +10,12 @@ export class DotnetObservableListener<T> {
         this.logger.setLevel(log.levels.INFO);
         this.anchors.add(observable.subscribe(async event => {
             this.logger.debug(`Raising Observable OnNext: ${JSON.stringify(event)}`);
-            await listener.invokeMethodAsync("OnNext", event)
+            try {
+                await listener.invokeMethodAsync("OnNext", event)
+            } catch (error) {
+                console.error("Failed to raise .NET observable OnNext", {event, error});
+                throw error;
+            }
             this.logger.debug(`Raised Observable OnNext: ${JSON.stringify(event)}`);
         }, async error => {
             this.logger.debug(`Raising Observable OnError: ${JSON.stringify(error)}`);

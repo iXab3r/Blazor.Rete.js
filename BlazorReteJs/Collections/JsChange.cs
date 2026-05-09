@@ -1,5 +1,7 @@
 ﻿using DynamicData;
 
+using System.Text.Json.Serialization;
+
 namespace BlazorReteJs.Collections;
 
 /// <summary>
@@ -11,16 +13,19 @@ public readonly record struct JsChange<T>
     /// <summary>
     /// Gets a single item change.
     /// </summary>
+    [JsonPropertyName("item")]
     public JsItemChange<T> Item { get; init; }
 
     /// <summary>
     /// Gets a multiple item change.
     /// </summary>
+    [JsonPropertyName("range")]
     public JsRangeChange<T> Range { get; init;}
 
     /// <summary>
     /// Gets the reason for the change.
     /// </summary>
+    [JsonPropertyName("reason")]
     public ListChangeReason Reason { get; init;}
 
     /// <summary>
@@ -29,5 +34,6 @@ public readonly record struct JsChange<T>
     /// <value>
     /// The type.
     /// </value>
+    [JsonIgnore]
     public ChangeType Type => Reason.GetChangeType();
 }

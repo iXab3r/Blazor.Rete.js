@@ -21,17 +21,46 @@ const MagneticPath = styled.path<{ styles?: (props: any) => any }>`
   filter: blur(2px);
 `;
 
+type MagneticConnectionData = ClassicScheme["Connection"] & {
+    isLoop?: boolean;
+    isMagnetic?: boolean;
+    sourceNodeId?: string;
+    sourcePinId?: string;
+    sourcePinSide?: string;
+    targetNodeId?: string;
+    targetPinId?: string;
+    targetPinSide?: string;
+};
+
 export function MagneticConnection(props: {
-    data: ClassicScheme["Connection"] & { isLoop?: boolean };
+    data: MagneticConnectionData;
     styles?: () => any;
 }) {
     const { path } = useConnection();
 
     if (!path) return null;
 
+    const connectionKind = props.data.isMagnetic ? "magnetic-preview" : "preview";
+    const sourceNodeId = props.data.sourceNodeId || props.data.source || undefined;
+    const sourcePinId = props.data.sourcePinId || props.data.sourceOutput || undefined;
+    const targetNodeId = props.data.targetNodeId || props.data.target || undefined;
+    const targetPinId = props.data.targetPinId || props.data.targetInput || undefined;
+
     return (
-        <Svg data-testid="connection">
-            <MagneticPath styles={props.styles} d={path} />
+        <Svg
+            data-testid="magnetic-connection"
+            data-connection-id={props.data.id}
+            data-connection-kind={connectionKind}
+            data-source-node-id={sourceNodeId}
+            data-source-pin-id={sourcePinId}
+            data-source-pin-side={props.data.sourcePinSide}
+            data-target-node-id={targetNodeId}
+            data-target-pin-id={targetPinId}
+            data-target-pin-side={props.data.targetPinSide}>
+            <MagneticPath
+                className={`rete-connection rete-connection-preview-${connectionKind}`}
+                styles={props.styles}
+                d={path} />
         </Svg>
     );
 }

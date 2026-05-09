@@ -15,8 +15,18 @@ public sealed class JsObservableListenerFacade<T>
         return Observable.Create<T>(async observer =>
         {
             var consumer = new JsObservableConsumer<T>(); //IObservable<T>
-            var jsSubscription = await dotnetListenerFactory(consumer);
             var subscription = consumer.Sink.Subscribe(observer);
+            IJSObjectReference jsSubscription;
+            try
+            {
+                jsSubscription = await dotnetListenerFactory(consumer);
+            }
+            catch
+            {
+                subscription.Dispose();
+                consumer.Dispose();
+                throw;
+            }
             
             // ReSharper disable once AsyncVoidLambda
             return async () =>

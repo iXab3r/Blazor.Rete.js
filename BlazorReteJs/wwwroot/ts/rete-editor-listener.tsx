@@ -58,11 +58,11 @@ export class ReteEditorListener {
 
         this._editor.addPipe(ctx => {
             if (ctx.type === 'connectioncreated') {
-                this._connections.add(ctx.data.id);
+                this.trackConnectionById(ctx.data.id);
             }
 
             if (ctx.type === 'connectionremoved') {
-                this._connections.remove(ctx.data.id)
+                this.untrackConnectionById(ctx.data.id)
             }
 
             if (ctx.type === 'cleared') {
@@ -78,9 +78,16 @@ export class ReteEditorListener {
         });
 
         this._areaPlugin.addPipe(ctx => {
+            if (ctx.type === 'render' && ctx.data.type === 'connection') {
+                this.refreshConnectionsFromEditor();
+            }
+
             this._areaEventSink.next(ctx);
             return ctx;
         });
+
+        const connectionRefreshInterval = setInterval(() => this.refreshConnectionsFromEditor(), 250);
+        this._anchors.add(() => clearInterval(connectionRefreshInterval));
     }
 
     public getNodes(): RxObservableCollection<string> {
@@ -93,6 +100,30 @@ export class ReteEditorListener {
 
     public getConnections(): RxObservableCollection<string> {
         return this._connections;
+    }
+
+    public refreshConnectionsFromEditor(): void {
+        const editorConnectionIds = new Set(this._editor.getConnections().map(connection => connection.id));
+        this._connections.getItems()
+            .filter(connectionId => !editorConnectionIds.has(connectionId))
+            .forEach(connectionId => this.untrackConnectionById(connectionId));
+        editorConnectionIds.forEach(connectionId => this.trackConnectionById(connectionId));
+    }
+
+    public trackConnectionById(connectionId: string | undefined | null): void {
+        if (!connectionId || this._connections.contains(connectionId)) {
+            return;
+        }
+
+        this._connections.add(connectionId);
+    }
+
+    public untrackConnectionById(connectionId: string | undefined | null): void {
+        if (!connectionId || !this._connections.contains(connectionId)) {
+            return;
+        }
+
+        this._connections.remove(connectionId);
     }
 
     public getNodePositionUpdatesRaw(includeTranslated?: boolean): Observable<ReteNodePosition> {

@@ -29,7 +29,7 @@ const Path = styled.path<ConnectionExtraData & { styles?: (props: any) => any }>
   ${(props) =>
           props.isActive === undefined  &&
           css`
-            stroke: orange;
+            stroke: ${props.family === "value" ? "#7dd3fc" : "orange"};
           `}
   pointer-events: auto;
   ${(props) => props.styles && props.styles(props)}
@@ -40,8 +40,22 @@ export function ReteCustomConnectionComponent<Scheme extends ClassicScheme>(prop
     if (!path) return null;
     
     return (
-        <Svg data-testid="connection">
-            <Path isActive={props.data.isActive} styles={props.styles} d={path} />
+        <Svg
+            data-testid="connection"
+            data-connection-id={props.data.id}
+            data-connection-family={props.data.family}
+            data-connection-order={props.data.order}
+            data-source-node-id={props.data.source}
+            data-source-pin-id={props.data.sourceOutput}
+            data-target-node-id={props.data.target}
+            data-target-pin-id={props.data.targetInput}>
+            <Path
+                className={`rete-connection rete-connection-family-${props.data.family ?? "unknown"}`}
+                isActive={props.data.isActive}
+                family={props.data.family}
+                order={props.data.order}
+                styles={props.styles}
+                d={path} />
         </Svg>
     );
 }

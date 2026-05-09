@@ -1,4 +1,6 @@
-﻿namespace BlazorReteJs.Collections;
+using System.Text.Json.Serialization;
+
+namespace BlazorReteJs.Collections;
 
 /// <summary>
 /// Multiple change container.
@@ -12,7 +14,9 @@ public readonly record struct JsRangeChange<T>
     /// <value>
     /// The index.
     /// </value>
+    [JsonPropertyName("index")]
     public int? Index { get; init; }
-    
+
+    [JsonPropertyName("items")]
     public T[] Items { get; init; }
 }

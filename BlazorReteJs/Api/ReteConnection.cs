@@ -15,6 +15,8 @@ public class ReteConnection
         Target = new JsField<string>(jsRuntime, connectionRef, "target");
         SourcePinId = new JsField<string>(jsRuntime, connectionRef, "sourceOutput");
         TargetPinId = new JsField<string>(jsRuntime, connectionRef, "targetInput");
+        Family = new JsField<string?>(jsRuntime, connectionRef, "family");
+        Order = new JsField<int?>(jsRuntime, connectionRef, "order");
         IsActive = new JsField<bool>(jsRuntime, connectionRef, "isActive");
     }
 
@@ -28,6 +30,10 @@ public class ReteConnection
 
     public JsField<string> TargetPinId { get; }
 
+    public JsField<string?> Family { get; }
+
+    public JsField<int?> Order { get; }
+
     public JsField<bool> IsActive { get; }
 
     public static async Task<ReteConnection> FromJsConnection(IJSRuntime jsRuntime, IJSObjectReference connectionRef)
@@ -38,6 +44,8 @@ public class ReteConnection
         await result.Target.GetValue();
         await result.SourcePinId.GetValue();
         await result.TargetPinId.GetValue();
+        await result.Family.GetValue();
+        result.Order.ReportValue(await connectionRef.GetObjectFieldAsync<int>(jsRuntime, "order", 0));
         return result;
     }
 
@@ -48,6 +56,8 @@ public class ReteConnection
         result.Target.ReportValue(connectionParams.TargetNodeId!);
         result.SourcePinId.ReportValue(connectionParams.SourcePinId!);
         result.TargetPinId.ReportValue(connectionParams.TargetPinId!);
+        result.Family.ReportValue(connectionParams.Family);
+        result.Order.ReportValue(connectionParams.Order);
         return result;
     }
 

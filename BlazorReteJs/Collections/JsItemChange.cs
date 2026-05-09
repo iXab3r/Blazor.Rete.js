@@ -1,6 +1,8 @@
 ﻿using DynamicData;
 using DynamicData.Kernel;
 
+using System.Text.Json.Serialization;
+
 namespace BlazorReteJs.Collections;
 
 /// <summary>
@@ -12,16 +14,19 @@ public readonly struct JsItemChange<T>
     /// <summary>
     /// Gets the reason for the change.
     /// </summary>
+    [JsonPropertyName("reason")]
     public ListChangeReason Reason { get; init;}
 
     /// <summary>
     /// Gets the item which has changed.
     /// </summary>
+    [JsonPropertyName("current")]
     public T Current { get; init; }
 
     /// <summary>
     /// Gets the current index.
     /// </summary>
+    [JsonPropertyName("currentIndex")]
     public int? CurrentIndex { get; init;}
 
     /// <summary>
@@ -29,6 +34,7 @@ public readonly struct JsItemChange<T>
     ///
     /// This is only when Reason==ChangeReason.Replace.
     /// </summary>
+    [JsonPropertyName("previous")]
     public Optional<T> Previous { get; init;}
 
     /// <summary>
@@ -36,5 +42,6 @@ public readonly struct JsItemChange<T>
     ///
     /// This is only when Reason==ChangeReason.Replace or ChangeReason.Move.
     /// </summary>
+    [JsonPropertyName("previousIndex")]
     public int? PreviousIndex { get; init;}
 }

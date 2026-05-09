@@ -19,6 +19,10 @@ public readonly record struct ReteNodeParams
     [JsonPropertyName("maxOutputs")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
     public int? MaxOutputs { get; init; }
+
+    [JsonPropertyName("pins")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+    public IReadOnlyList<RetePinParams>? Pins { get; init; }
     
     [JsonPropertyName("x")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]

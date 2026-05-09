@@ -2,19 +2,29 @@
 import {NodeEditor} from "rete";
 import {AreaExtensions, AreaPlugin} from "rete-area-plugin";
 import {
-    AreaExtra, Rect,
+    AreaExtra,
+    createSideAwareConnectionPathPoints,
+    cubicBezierConnectionCurveFactory,
+    getPinSide,
+    getPinSideAnchorPosition,
+    getSocketPin,
+    Rect,
     ReteConnection, ReteConnectionSchemes,
     ReteNode,
     ReteNodeConnectionParams,
     ReteNodeParams,
-    ReteNodePosition, RetePoint, ReteRectangle,
+    ReteNodePosition,
+    RetePinDirection,
+    RetePinSide,
+    RetePoint,
+    ReteRectangle,
     Schemes,
     SelectableNodesAdapter
 } from './rete-editor-shared'
 
 import {AutoArrangePlugin} from "rete-auto-arrange-plugin";
-import {ConnectionPlugin, Presets as ConnectionPresets} from "rete-connection-plugin";
-import {ConnectionPathPlugin, Transformers} from 'rete-connection-path-plugin';
+import {ConnectionPlugin} from "rete-connection-plugin";
+import {ConnectionPathPlugin} from 'rete-connection-path-plugin';
 import {Presets, ReactPlugin} from "rete-react-plugin";
 import {ReadonlyPlugin} from "rete-readonly-plugin";
 
@@ -29,7 +39,11 @@ import {RxObservableCollection} from "./collections/rx-observable-collection";
 import {ReteEditorDockManager} from "./dock/rete-editor-dock-manager";
 import {ReteCustomSocketComponent} from "./rete-custom-socket-component";
 import {MagneticConnection} from "./magnetic-connection/rete-magnetic-connection-component";
-import {useMagneticConnectionForEditor} from "./magnetic-connection";
+import {
+    ClickToArmConnectionFlow,
+    createReteConnectionFromSocketsAndWait,
+    useMagneticConnectionForEditor
+} from "./magnetic-connection";
 import {Selector} from "rete-area-plugin/_types/extensions";
 import {getDOMSocketPosition} from "rete-render-utils";
 import {AsyncDockPlugin} from "./dock";
@@ -45,6 +59,7 @@ export class ReteEditorFacade {
     private readonly _connectionPlugin: ConnectionPlugin<Schemes, AreaExtra>;
     private readonly _arrangePlugin: AutoArrangePlugin<Schemes>;
     private readonly _readonlyPlugin: ReadonlyPlugin<Schemes>;
+    private readonly _connectionFlow: ClickToArmConnectionFlow<Schemes, any[]>;
     private readonly _dockPlugin: AsyncDockPlugin<Schemes>;
     private readonly _dockManager: ReteEditorDockManager<Schemes>;
     private readonly _background: HTMLDivElement = this.prepareBackgroundElement();
@@ -75,8 +90,19 @@ export class ReteEditorFacade {
         this._connectionPlugin = new ConnectionPlugin<Schemes, AreaExtra>();
         this._renderPlugin = new ReactPlugin<Schemes, AreaExtra>({createRoot});
         this._readonlyPlugin = new ReadonlyPlugin<Schemes>();
+        this._eventsListener = new ReteEditorListener(this._editor, this._areaPlugin);
 
-        this._connectionPlugin.addPreset(ConnectionPresets.classic.setup());
+        this._connectionFlow = new ClickToArmConnectionFlow<Schemes, any[]>({
+            makeConnection: async (from, to, context) => {
+                const createdConnection = await createReteConnectionFromSocketsAndWait(context.editor as NodeEditor<Schemes>, from, to);
+                if (createdConnection) {
+                    this.trackConnectionById(createdConnection.id);
+                }
+
+                return Boolean(createdConnection);
+            }
+        });
+        this._connectionPlugin.addPreset(() => this._connectionFlow);
         this._editor.use(this._areaPlugin);
         this._editor.use(this._readonlyPlugin.root);
         this._areaPlugin.use(this._connectionPlugin);
@@ -119,17 +145,13 @@ export class ReteEditorFacade {
             },
             // eslint-disable-next-line react-hooks/rules-of-hooks
             socketPositionWatcher: getDOMSocketPosition({
-                offset: (position, nodeId, side) => {
-                    return ({
-                        x: position.x,
-                        y: position.y + 5 * (side === 'input' ? -1 : 1)
-                    });
-                }
+                offset: (position, nodeId, side, key) => this.getSocketAnchorPosition(position, nodeId, side, key)
             })
         }));
 
         const path = new ConnectionPathPlugin({
-            transformer: () => Transformers.classic({vertical: true})
+            curve: () => cubicBezierConnectionCurveFactory,
+            transformer: connection => points => this.getConnectionPathPoints(connection as ReteConnectionSchemes, points as RetePoint[])
         })
         this._renderPlugin.use(path)
 
@@ -139,10 +161,12 @@ export class ReteEditorFacade {
             return context
         })
 
-        this._eventsListener = new ReteEditorListener(this._editor, this._areaPlugin);
-
         AreaExtensions.simpleNodesOrder(this._areaPlugin);
-        useMagneticConnectionForEditor(this._editor, this._connectionPlugin);
+        useMagneticConnectionForEditor(
+            this._editor,
+            this._connectionPlugin,
+            this._connectionFlow,
+            connectionId => this.trackConnectionById(connectionId));
 
         this._dockPlugin = new AsyncDockPlugin<Schemes>();
         this._dockPlugin.addPreset(verticalDockSetup({area: this._areaPlugin}));
@@ -180,6 +204,7 @@ export class ReteEditorFacade {
     }
 
     public getConnectionsCollection(): RxObservableCollection<string> {
+        this._eventsListener.refreshConnectionsFromEditor();
         return this._eventsListener.getConnections();
     }
 
@@ -275,6 +300,7 @@ export class ReteEditorFacade {
             return false;
         }
         if (await this._editor.removeConnection(connectionId)) {
+            this._eventsListener.untrackConnectionById(connectionId);
             return true;
         } else {
             console.warn(`Failed to remove connection by Id ${connectionId}`)
@@ -321,6 +347,7 @@ export class ReteEditorFacade {
             const node = await this.addConnectionOrThrow(connectionParams);
             result.push(node);
         }
+        this._eventsListener.refreshConnectionsFromEditor();
 
         return result;
     }
@@ -494,6 +521,11 @@ export class ReteEditorFacade {
         return result.map(x => DotNet.createJSObjectReference(x));
     }
 
+    public getConnectionsDotNet(): JsObjectReference[] {
+        this._eventsListener.refreshConnectionsFromEditor();
+        return this._editor.getConnections().map(x => DotNet.createJSObjectReference(x));
+    }
+
     public addDockTemplate(nodeParams: ReteNodeParams): void {
         if (nodeParams.id !== undefined && nodeParams.id !== null) {
             throw new Error("The 'id' property of nodeParams should be undefined or null.");
@@ -513,19 +545,26 @@ export class ReteEditorFacade {
         return new ReteNode(this._editorId, params);
     }
 
+    private trackConnectionById(connectionId: string | undefined | null): void {
+        this._eventsListener.trackConnectionById(connectionId);
+        this._eventsListener.refreshConnectionsFromEditor();
+    }
+
     private async addConnectionOrThrow(connectionParams: ReteNodeConnectionParams): Promise<ReteConnection<ReteNode>> {
         const sourceNode = this.getNodeById(connectionParams.sourceNodeId);
         const targetNode = this.getNodeById(connectionParams.targetNodeId);
 
         const connection = new ReteConnection(
             sourceNode,
-            connectionParams.sourcePinId ?? sourceNode.outputKey,
+            (connectionParams.sourcePinId ?? sourceNode.outputKey) as never,
             targetNode,
-            connectionParams.targetPinId ?? targetNode.inputKey);
+            (connectionParams.targetPinId ?? targetNode.inputKey) as never,
+            connectionParams);
         if (connectionParams.id) {
             connection.id = connectionParams.id;
         }
         if (await this._editor.addConnection(connection)) {
+            this._eventsListener.trackConnectionById(connection.id);
             return connection;
         } else {
             throw `Failed to add connection ${JSON.stringify(connectionParams)}`;
@@ -570,5 +609,70 @@ export class ReteEditorFacade {
         background.classList.add('fill-area');
 
         return background;
+    }
+
+    private getConnectionPathPoints(connection: ReteConnectionSchemes, points: RetePoint[]): RetePoint[] {
+        const pathMetadata = connection as ReteConnectionSchemes & {
+            sourcePinSide?: Exclude<RetePinSide, "auto">;
+            targetPinSide?: Exclude<RetePinSide, "auto">;
+        };
+        const resolvedSourceSide = pathMetadata.sourcePinSide ??
+            this.tryGetSocketPinSide(connection.source, "output", String(connection.sourceOutput));
+        const resolvedTargetSide = pathMetadata.targetPinSide ??
+            this.tryGetSocketPinSide(connection.target, "input", String(connection.targetInput));
+        const sourceSide = resolvedSourceSide ?? this.getOppositePinSide(resolvedTargetSide ?? "left");
+        const targetSide = resolvedTargetSide ?? this.getOppositePinSide(sourceSide);
+
+        return createSideAwareConnectionPathPoints(points, sourceSide, targetSide);
+    }
+
+    private getSocketAnchorPosition(position: RetePoint, nodeId: string, side: string, key: string): RetePoint {
+        const direction: RetePinDirection = side === "output" ? "output" : "input";
+        return getPinSideAnchorPosition(position, this.getSocketPinSide(nodeId, direction, key));
+    }
+
+    private getSocketPinSide(nodeId: string, direction: RetePinDirection, key: string) {
+        return this.tryGetSocketPinSide(nodeId, direction, key) ?? getPinSide({
+            id: key,
+            family: "route",
+            direction,
+            side: direction === "output" ? "bottom" : "top"
+        });
+    }
+
+    private tryGetSocketPinSide(nodeId: string, direction: RetePinDirection, key: string): Exclude<RetePinSide, "auto"> | undefined {
+        if (!nodeId || !key) {
+            return undefined;
+        }
+
+        const node = this._editor.getNode(nodeId);
+        if (!node) {
+            return undefined;
+        }
+
+        const socket = direction === "input"
+            ? node?.inputs?.[key]?.socket
+            : node?.outputs?.[key]?.socket;
+
+        return getPinSide(getSocketPin(socket) ?? {
+            id: key,
+            family: "route",
+            direction,
+            side: direction === "output" ? "bottom" : "top"
+        });
+    }
+
+    private getOppositePinSide(pinSide: Exclude<RetePinSide, "auto">): Exclude<RetePinSide, "auto"> {
+        switch (pinSide) {
+            case "left":
+                return "right";
+            case "right":
+                return "left";
+            case "bottom":
+                return "top";
+            case "top":
+            default:
+                return "bottom";
+        }
     }
 }
