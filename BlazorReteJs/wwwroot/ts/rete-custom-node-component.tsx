@@ -11,6 +11,7 @@ import {
     getPinTooltip,
     getPrimaryReteOutputLauncherOption,
     getReteOutputLauncherOptionByMenuIndex,
+    getSocketRailSlot,
     getSocketPin,
     handleReteOutputLauncherMenuClick,
     handleReteOutputLauncherMenuPointerDown,
@@ -21,7 +22,8 @@ import {
     ReteOutputLauncherOption,
     RetePinDirection,
     RetePinParams,
-    RetePinSide
+    RetePinSide,
+    ReteSocketRailSlot
 } from "./rete-editor-shared";
 import {shouldConcealAdvancedPin} from "./rete-custom-socket-component";
 import {sortByIndex} from "./scaffolding/utils";
@@ -110,15 +112,17 @@ export const NodeStyledComponent = styled.div<NodeExtraData & { styles?: (props:
     }
 
     .node-sockets-top {
-        grid-column: 2;
+        grid-column: 1 / 4;
         grid-row: 1;
         align-self: start;
+        justify-self: stretch;
     }
 
     .node-sockets-bottom {
-        grid-column: 2;
+        grid-column: 1 / 4;
         grid-row: 3;
         align-self: end;
+        justify-self: stretch;
     }
 
     .node-sockets-left {
@@ -140,6 +144,37 @@ export const NodeStyledComponent = styled.div<NodeExtraData & { styles?: (props:
         display: flex;
         align-items: center;
         justify-content: center;
+    }
+
+    .node-socket-rail {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+        align-items: center;
+        justify-items: center;
+        width: 100%;
+    }
+
+    .node-socket-rail-slot {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 2px;
+        min-width: 0;
+    }
+
+    .node-socket-rail-slot-start {
+        grid-column: 1;
+        justify-self: end;
+    }
+
+    .node-socket-rail-slot-center {
+        grid-column: 2;
+        justify-self: center;
+    }
+
+    .node-socket-rail-slot-end {
+        grid-column: 3;
+        justify-self: start;
     }
 
     .socket-port.pin-advanced-concealable:not(.rete-pin-connected):not(.rete-pin-picked):not(.rete-pin-compatible):not(.rete-pin-nearest):not(.rete-pin-replacement) {
@@ -441,6 +476,48 @@ function renderSocketItem<Scheme extends ClassicScheme>(
     return item.kind === "launcher"
         ? <ReteOutputLauncher key="value-output-launcher" nodeProps={props} launcher={item.launcher}/>
         : renderSocketPort(props, item.port);
+}
+
+function getSocketItemPin(item: RenderedSocketItem): RetePinParams | undefined {
+    return item.kind === "launcher"
+        ? item.launcher.ports[0]?.pin
+        : getSocketPin(item.port.socket);
+}
+
+function splitItemsForHorizontalRail(
+    items: RenderedSocketItem[],
+    side: "top" | "bottom"
+): Record<ReteSocketRailSlot, RenderedSocketItem[]> {
+    return items.reduce<Record<ReteSocketRailSlot, RenderedSocketItem[]>>((slots, item) => {
+        slots[getSocketRailSlot(getSocketItemPin(item), side)].push(item);
+        return slots;
+    }, {
+        start: [],
+        center: [],
+        end: []
+    });
+}
+
+function renderHorizontalSocketRail<Scheme extends ClassicScheme>(
+    props: ReteCustomNodeProps<Scheme>,
+    side: "top" | "bottom",
+    items: RenderedSocketItem[],
+    showSockets: boolean
+) {
+    const slots = splitItemsForHorizontalRail(showSockets ? items : [], side);
+    return (
+        <div className={`node-socket-rail node-socket-rail-${side}`}>
+            <div className="node-socket-rail-slot node-socket-rail-slot-start">
+                {slots.start.map(item => renderSocketItem(props, item))}
+            </div>
+            <div className="node-socket-rail-slot node-socket-rail-slot-center">
+                {slots.center.map(item => renderSocketItem(props, item))}
+            </div>
+            <div className="node-socket-rail-slot node-socket-rail-slot-end">
+                {slots.end.map(item => renderSocketItem(props, item))}
+            </div>
+        </div>
+    );
 }
 
 function getPortSide(port: RenderedSocketPort) {
@@ -747,7 +824,7 @@ export function ReteCustomNodeComponent<Scheme extends ClassicScheme>(props: Ret
             height={actualSize.height}>
             <div className="node-grid">
                 <div className="node-sockets node-sockets-top">
-                    {showSockets && topItems.map(item => renderSocketItem(props, item))}
+                    {renderHorizontalSocketRail(props, "top", topItems, showSockets)}
                 </div>
 
                 <div className="node-sockets node-sockets-left">
@@ -762,7 +839,7 @@ export function ReteCustomNodeComponent<Scheme extends ClassicScheme>(props: Ret
                 </div>
 
                 <div className="node-sockets node-sockets-bottom">
-                    {showSockets && bottomItems.map(item => renderSocketItem(props, item))}
+                    {renderHorizontalSocketRail(props, "bottom", bottomItems, showSockets)}
                 </div>
             </div>
         </NodeStyledComponent>

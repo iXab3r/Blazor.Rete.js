@@ -136,6 +136,24 @@ export function getPinSide(pin?: RetePinParams): Exclude<RetePinSide, "auto"> {
     return pin?.direction === "output" ? "right" : "left";
 }
 
+export type ReteSocketRailSlot = "start" | "center" | "end";
+
+export function getSocketRailSlot(pin: RetePinParams | undefined, side: Exclude<RetePinSide, "auto">): ReteSocketRailSlot {
+    if (side !== "top" && side !== "bottom") {
+        return "center";
+    }
+
+    if (pin?.family === "route") {
+        return "center";
+    }
+
+    if (pin?.pinRole === "condition") {
+        return side === "top" ? "start" : "end";
+    }
+
+    return "center";
+}
+
 export function getPinSideAnchorPosition(
     position: RetePoint,
     pinSide: Exclude<RetePinSide, "auto">
@@ -867,6 +885,7 @@ export type NodeExtraData = {
     selected: boolean;
     editorId: string;
     extraParams: ReteNodeExtraParams;
+    blazorHost?: ReteBlazorHostDescriptor;
 };
 
 export type ConnectionExtraData = {

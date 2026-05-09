@@ -28,6 +28,7 @@ const {
     getPrimaryReteOutputLauncherOption,
     getReteOutputLauncherOptionByMenuIndex,
     getSocketPin,
+    getSocketRailSlot,
     handleReteOutputLauncherMenuClick,
     handleReteOutputLauncherMenuPointerDown,
     ReteConnection,
@@ -233,6 +234,36 @@ describe("Rete typed pin bridge model", () => {
         expect(html).toContain('pin-flow-cached');
         expect(html).not.toContain('data-pin-condition-icon="true"');
         expect(html).not.toContain(">C<");
+    });
+
+    it("keeps route pins centered while condition pins use offset top and bottom rail slots", () => {
+        // Given
+        const routeOutput: RetePinParams = {
+            id: "route-out",
+            family: "route",
+            direction: "output"
+        };
+        const preCondition: RetePinParams = {
+            id: "pre-condition",
+            family: "value",
+            direction: "input",
+            valueTypeId: "boolean",
+            pinRole: "condition"
+        };
+        const postCondition: RetePinParams = {
+            id: "post-condition",
+            family: "value",
+            direction: "input",
+            valueTypeId: "boolean",
+            pinRole: "condition"
+        };
+
+        // When / Then
+        expect(getSocketRailSlot(routeInput, "top")).toBe("center");
+        expect(getSocketRailSlot(routeOutput, "bottom")).toBe("center");
+        expect(getSocketRailSlot(preCondition, "top")).toBe("start");
+        expect(getSocketRailSlot(postCondition, "bottom")).toBe("end");
+        expect(getSocketRailSlot(valueOutput, "right")).toBe("center");
     });
 
     it("builds accepted connection control points from the rendered pin sides", () => {
