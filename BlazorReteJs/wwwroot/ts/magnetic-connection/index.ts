@@ -218,12 +218,15 @@ const nodeCompatibilityAttributeNames = [
     "aria-disabled"
 ];
 
+const rejectedConnectionFeedbackTimeoutMs = 3500;
+
 export type ClickToArmConnectionFlowParams<S extends Schemes> = {
     makeConnection: <K extends any[]>(from: SocketData, to: SocketData, context: Context<S, K>) => boolean | undefined | Promise<boolean | undefined>;
 };
 
 export class ClickToArmConnectionFlow<S extends Schemes, K extends any[] = any[]> implements Flow<S, K> {
     private pickedSocket: SocketData | undefined;
+    private detachReleaseSocket: SocketData | undefined;
 
     constructor(private readonly params: ClickToArmConnectionFlowParams<S>) {
     }
@@ -234,6 +237,14 @@ export class ClickToArmConnectionFlow<S extends Schemes, K extends any[] = any[]
                 await this.pickInitialSocket(params.socket, context);
             }
             return;
+        }
+
+        if (params.event === "up" && this.detachReleaseSocket) {
+            const releaseSocket = this.detachReleaseSocket;
+            this.detachReleaseSocket = undefined;
+            if (isSameSocket(releaseSocket, params.socket)) {
+                return;
+            }
         }
 
         if (isSameSocket(this.pickedSocket, params.socket)) {
@@ -334,13 +345,14 @@ export class ClickToArmConnectionFlow<S extends Schemes, K extends any[] = any[]
             return false;
         }
 
-        if (!await context.scope.emit({type: "connectionpick", data: {socket: outputSocket}})) {
+        const removed = await context.editor.removeConnection(connection.id);
+        if (!removed) {
             return true;
         }
 
-        const removed = await context.editor.removeConnection(connection.id);
-        if (removed) {
+        if (await context.scope.emit({type: "connectionpick", data: {socket: outputSocket}})) {
             this.pickedSocket = outputSocket;
+            this.detachReleaseSocket = socket;
         }
 
         return true;
@@ -857,6 +869,11 @@ type PendingConnectionLabelHandle = {
     close: () => void;
 };
 
+type RejectedConnectionFeedbackHandle = {
+    element: HTMLElement;
+    close: () => void;
+};
+
 type PinPairPickerMenuOptions = {
     requestId: number;
     editorId?: string;
@@ -1189,6 +1206,93 @@ function createPendingConnectionLabel(
     return handle;
 }
 
+function createRejectedConnectionFeedback(
+    container: HTMLElement,
+    detail: PendingConnectionLabelDetail,
+    text: string
+): RejectedConnectionFeedbackHandle | undefined {
+    const ownerDocument = container.ownerDocument;
+    if (!ownerDocument?.body) {
+        return undefined;
+    }
+
+    const element = ownerDocument.createElement("div");
+    element.className = "rete-connection-feedback rete-connection-feedback--warning";
+    element.setAttribute("role", "status");
+    element.setAttribute("aria-live", "assertive");
+    element.setAttribute("data-connection-feedback", "rejected");
+    setOptionalAttribute(element, "data-connection-compatibility", detail.compatibility);
+    setOptionalAttribute(element, "data-connection-compatibility-reason", detail.compatibilityReason);
+    setOptionalAttribute(element, "data-connection-warning", text);
+    setOptionalAttribute(element, "data-source-node-id", detail.sourceNodeId);
+    setOptionalAttribute(element, "data-source-node-label", detail.sourceNodeLabel);
+    setOptionalAttribute(element, "data-source-pin-id", detail.sourcePinId);
+    setOptionalAttribute(element, "data-source-pin-name", detail.sourcePinName);
+    setOptionalAttribute(element, "data-target-node-id", detail.targetNodeId);
+    setOptionalAttribute(element, "data-target-node-label", detail.targetNodeLabel);
+    setOptionalAttribute(element, "data-target-pin-id", detail.targetPinId);
+    setOptionalAttribute(element, "data-target-pin-name", detail.targetPinName);
+
+    element.textContent = text;
+    element.title = text;
+    element.setAttribute("aria-label", text);
+    Object.assign(element.style, {
+        position: "fixed",
+        zIndex: "2147483647",
+        padding: "5px 9px",
+        borderRadius: "4px",
+        border: "1px solid rgba(248, 113, 113, 0.78)",
+        borderLeft: "3px solid rgba(248, 113, 113, 1)",
+        background: "rgba(15, 23, 42, 0.92)",
+        color: "#fecaca",
+        boxShadow: "0 6px 18px rgba(0, 0, 0, 0.28)",
+        font: "12px system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+        lineHeight: "16px",
+        pointerEvents: "none",
+        whiteSpace: "nowrap",
+        textAlign: "left"
+    });
+
+    ownerDocument.body.appendChild(element);
+    placeRejectedConnectionFeedback(element, container);
+
+    const timeoutHandle = setTimeout(() => element.remove(), rejectedConnectionFeedbackTimeoutMs);
+    (timeoutHandle as any)?.unref?.();
+
+    return {
+        element,
+        close() {
+            clearTimeout(timeoutHandle);
+            element.remove();
+        }
+    };
+}
+
+function placeRejectedConnectionFeedback(element: HTMLElement, container: HTMLElement): void {
+    const view = container.ownerDocument.defaultView;
+    const margin = 8;
+    const containerRect = container.getBoundingClientRect();
+    let left = containerRect.left + margin;
+    let top = containerRect.top + 42;
+
+    element.style.left = `${left}px`;
+    element.style.top = `${top}px`;
+
+    if (!view) {
+        return;
+    }
+
+    const rect = element.getBoundingClientRect();
+    const maxLeft = Math.max(margin, view.innerWidth - rect.width - margin);
+    const maxTop = Math.max(margin, view.innerHeight - rect.height - margin);
+
+    left = Math.min(Math.max(left, margin), maxLeft);
+    top = Math.min(Math.max(top, margin), maxTop);
+
+    element.style.left = `${left}px`;
+    element.style.top = `${top}px`;
+}
+
 function renderPendingConnectionLabelContent(element: HTMLElement, detail: PendingConnectionLabelDetail): void {
     const ownerDocument = element.ownerDocument;
     const main = ownerDocument.createElement("span");
@@ -1345,6 +1449,44 @@ function getConnectionWarningText(
         default:
             return `You can't connect ${source} to ${target}.`;
     }
+}
+
+function getRejectedConnectionFeedbackText(
+    detail: PendingConnectionLabelDetail,
+    reason?: string
+): string | undefined {
+    if (reason === "same-node" || reason === "same-socket") {
+        return undefined;
+    }
+
+    if (reason === "direction") {
+        return "Start from an output and connect to an input.";
+    }
+
+    const source = formatRejectedConnectionEndpoint(detail.sourceNodeLabel, detail.sourcePinName, detail.nodeLabel);
+    const target = formatRejectedConnectionEndpoint(detail.targetNodeLabel, detail.targetPinName, detail.targetNodeId);
+
+    switch (reason) {
+        case "source-cardinality":
+            return `${source} can't add another connection.`;
+        case "target-cardinality":
+            return `${target} already has a connection.`;
+        default:
+            return `You can't connect ${source} to ${target}.`;
+    }
+}
+
+function formatRejectedConnectionEndpoint(
+    nodeLabel?: string,
+    pinName?: string,
+    fallback?: string
+): string {
+    const node = formatNodeDisplayName(nodeLabel, fallback) || "this node";
+    const pin = formatNodeDisplayName(pinName);
+
+    return pin
+        ? `${node} ${pin}`
+        : node;
 }
 
 function getPinPreviewLabel(pin: RetePinParams): string | undefined {
@@ -1531,6 +1673,7 @@ export function useMagneticConnection<S extends Schemes, K = never>(
     let pickerRequestId = 0;
     let activePinPairPicker: ActivePinPairPickerState | undefined;
     let pendingConnectionLabel: PendingConnectionLabelHandle | undefined;
+    let rejectedConnectionFeedback: RejectedConnectionFeedbackHandle | undefined;
     let pendingLabelTargetSocket: ReteSocketData | undefined;
     let pendingLabelCompatibility: RetePinCompatibilityResult | undefined;
     let pendingLabelWarning: string | undefined;
@@ -1544,6 +1687,7 @@ export function useMagneticConnection<S extends Schemes, K = never>(
 
     editor.addPipe(context => {
         if (context.type === "cleared") {
+            closeRejectedConnectionFeedback();
             resetTransientState("editor-cleared");
         } else if (context.type === "noderemoved") {
             if (picked?.nodeId === context.data.id) {
@@ -1577,6 +1721,8 @@ export function useMagneticConnection<S extends Schemes, K = never>(
             if (!contextData.created) {
                 if (nearestSocket && props.display(initial, nearestSocket)) {
                     await props.createConnection(initial, nearestSocket);
+                } else if (contextData.socket) {
+                    showConnectionWarning(initial, hydrateSocket(contextData.socket));
                 } else if (!contextData.socket) {
                     preservePicker = await handleNodeBodyDrop(initial, lastPointerPosition ?? area.area.pointer, currentGestureId);
                 }
@@ -1690,6 +1836,7 @@ export function useMagneticConnection<S extends Schemes, K = never>(
 
     function startGesture(socket: ReteSocketData): void {
         cancelActivePinPairPicker("new-connection-gesture");
+        closeRejectedConnectionFeedback();
         gestureId++;
         picked = socket;
         nearestSocket = null;
@@ -1735,30 +1882,57 @@ export function useMagneticConnection<S extends Schemes, K = never>(
     }
 
     function showConnectionWarning(initial: ReteSocketData, rejectedSocket: ReteSocketData): void {
-        if (!picked || picked.element !== initial.element || !pendingConnectionLabel) {
-            return;
-        }
-
         const compatibility = getSocketCompatibility(initial, rejectedSocket, editor);
         if (compatibility.reason === "same-node" || compatibility.reason === "same-socket") {
-            pendingLabelTargetSocket = undefined;
-            pendingLabelCompatibility = undefined;
-            pendingLabelWarning = undefined;
-            updatePendingConnectionLabel(lastPointerPosition);
+            if (picked?.element === initial.element && pendingConnectionLabel) {
+                pendingLabelTargetSocket = undefined;
+                pendingLabelCompatibility = undefined;
+                pendingLabelWarning = undefined;
+                updatePendingConnectionLabel(lastPointerPosition);
+            }
             return;
         }
 
-        pendingLabelTargetSocket = rejectedSocket;
-        pendingLabelCompatibility = compatibility;
-        pendingLabelWarning = undefined;
-        updateCompatibilityClasses(Array.from(sockets.values()), picked, editor, nearestSocket ?? undefined);
-        updateNodeCompatibilityClasses(Array.from(sockets.values()), picked, rejectedSocket);
-        updatePendingConnectionLabel(lastPointerPosition);
+        if (picked?.element === initial.element && pendingConnectionLabel) {
+            pendingLabelTargetSocket = rejectedSocket;
+            pendingLabelCompatibility = compatibility;
+            pendingLabelWarning = undefined;
+            updateCompatibilityClasses(Array.from(sockets.values()), picked, editor, nearestSocket ?? undefined);
+            updateNodeCompatibilityClasses(Array.from(sockets.values()), picked, rejectedSocket);
+            updatePendingConnectionLabel(lastPointerPosition);
+        }
+
+        showRejectedConnectionFeedback(initial, rejectedSocket, compatibility);
     }
 
     function closePendingConnectionLabel(): void {
         pendingConnectionLabel?.close();
         pendingConnectionLabel = undefined;
+    }
+
+    function showRejectedConnectionFeedback(
+        initial: ReteSocketData,
+        rejectedSocket: ReteSocketData,
+        compatibility: RetePinCompatibilityResult
+    ): void {
+        const detail = createPendingConnectionLabelDetailForState(
+            initial,
+            getNodeLabelFromSocket,
+            rejectedSocket,
+            compatibility);
+        const warningText = getRejectedConnectionFeedbackText(detail, compatibility.reason);
+
+        if (!warningText) {
+            return;
+        }
+
+        closeRejectedConnectionFeedback();
+        rejectedConnectionFeedback = createRejectedConnectionFeedback(area.container, detail, warningText);
+    }
+
+    function closeRejectedConnectionFeedback(): void {
+        rejectedConnectionFeedback?.close();
+        rejectedConnectionFeedback = undefined;
     }
 
     async function handleNodeBodyDrop(

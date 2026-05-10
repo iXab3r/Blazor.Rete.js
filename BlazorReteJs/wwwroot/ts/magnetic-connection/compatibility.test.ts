@@ -782,17 +782,41 @@ describe("Rete pin compatibility hints", () => {
         const outputSocket = createSocket("source", "value-out", "output", valueOutput);
         const inputSocket = createSocket("target", "value-in", "input", valueInput);
         const emitted: any[] = [];
-        const removeConnection = jest.fn(async () => true);
-        const context = createFlowContext([existingConnection], emitted, [outputSocket, inputSocket], removeConnection);
+        const operations: string[] = [];
+        const removeConnection = jest.fn(async () => {
+            operations.push("removeConnection");
+            return true;
+        });
+        const context = {
+            editor: {
+                getConnections: () => [existingConnection],
+                removeConnection
+            },
+            scope: {
+                emit: async (event: any) => {
+                    operations.push(event.type);
+                    emitted.push(event);
+                    return true;
+                }
+            },
+            socketsCache: new Map([
+                [outputSocket.element, outputSocket],
+                [inputSocket.element, inputSocket]
+            ])
+        } as any;
+        const makeConnection = jest.fn();
         const flow = new ClickToArmConnectionFlow({
-            makeConnection: jest.fn()
+            makeConnection
         });
 
         // When
         await flow.pick({socket: inputSocket, event: "down"}, context);
+        await flow.pick({socket: inputSocket, event: "up"}, context);
 
         // Then
         expect(removeConnection).toHaveBeenCalledWith("connection-1");
+        expect(operations).toEqual(["removeConnection", "connectionpick"]);
+        expect(makeConnection).not.toHaveBeenCalled();
         expect(flow.getPickedSocket()).toBe(outputSocket);
         expect(emitted).toContainEqual({
             type: "connectionpick",
@@ -1083,6 +1107,158 @@ describe("Rete pin compatibility hints", () => {
         expect(shouldConcealAdvancedPin(pins.targetRegionInput, {
             compatible: targetElement.classList.contains("rete-pin-compatible")
         })).toBe(true);
+    });
+
+    it("keeps rejected connection feedback visible after Escape clears the pending label", async () => {
+        // Given
+        const pins = createBtLikeRegionPins();
+        const harness = createMagneticDomHarness();
+        const sourceElement = harness.createSocketElement(pins.windowRegionOutput);
+        const targetPin: RetePinParams = {
+            id: "boolean-input",
+            name: "Boolean condition",
+            family: "value",
+            direction: "input",
+            valueTypeId: "boolean",
+            coordinateTypeId: "window"
+        };
+        const targetElement = harness.createSocketElement(targetPin);
+        const sourceSocket = createSocketWithElement("image-search", "window-region", "output", pins.windowRegionOutput, sourceElement);
+        const targetSocket = createSocketWithElement("mouse-move", "boolean-input", "input", targetPin, targetElement);
+
+        // When
+        await harness.renderSocket(sourceSocket);
+        await harness.renderSocket(targetSocket);
+        await harness.flow.pick({socket: sourceSocket, event: "down"}, harness.createFlowContext());
+        await harness.connection.emit({
+            type: "connectionreject",
+            data: {
+                initial: sourceSocket,
+                socket: targetSocket,
+                created: false
+            }
+        });
+
+        // Then
+        const feedback = harness.document.body.querySelector(".rete-connection-feedback")!;
+        expect(feedback).toBeDefined();
+        expect(feedback.textContent).toBe("You can't connect ImageSearch ImageSearch Region to MouseMove Boolean condition.");
+        expect(feedback.getAttribute("aria-label")).toBe(feedback.textContent);
+        expect(feedback.getAttribute("data-connection-feedback")).toBe("rejected");
+        expect(feedback.getAttribute("data-connection-compatibility")).toBe("incompatible");
+        expect(feedback.getAttribute("data-connection-compatibility-reason")).toBe("value-type");
+        expect(feedback.getAttribute("data-source-node-label")).toBe("ImageSearch");
+        expect(feedback.getAttribute("data-source-pin-name")).toBe("ImageSearch Region");
+        expect(feedback.getAttribute("data-target-node-label")).toBe("MouseMove");
+        expect(feedback.getAttribute("data-target-pin-name")).toBe("Boolean condition");
+        expect(feedback.textContent).not.toContain("value-type");
+        expect(feedback.textContent).not.toContain("window-region");
+        expect(feedback.textContent).not.toContain("boolean-input");
+
+        // When
+        const escape = createKeyboardEvent("Escape");
+        harness.document.dispatchEvent(escape);
+        await flushPromises();
+
+        // Then
+        expect(harness.document.body.querySelector(".rete-pending-connection-label")).toBeUndefined();
+        expect(harness.document.body.querySelector(".rete-connection-feedback")).toBe(feedback);
+        expect(escape.preventDefault).toHaveBeenCalledTimes(1);
+        expect(harness.connection.drop).toHaveBeenCalledTimes(1);
+    });
+
+    it("keeps rejected connection feedback visible after an incompatible socket drop clears the pending label", async () => {
+        // Given
+        const pins = createBtLikeRegionPins();
+        const harness = createMagneticDomHarness();
+        const sourceElement = harness.createSocketElement(pins.windowRegionOutput);
+        const targetPin: RetePinParams = {
+            id: "boolean-input",
+            name: "Boolean condition",
+            family: "value",
+            direction: "input",
+            valueTypeId: "boolean",
+            coordinateTypeId: "window"
+        };
+        const targetElement = harness.createSocketElement(targetPin);
+        const sourceSocket = createSocketWithElement("image-search", "window-region", "output", pins.windowRegionOutput, sourceElement);
+        const targetSocket = createSocketWithElement("mouse-move", "boolean-input", "input", targetPin, targetElement);
+
+        // When
+        await harness.renderSocket(sourceSocket);
+        await harness.renderSocket(targetSocket);
+        await harness.flow.pick({socket: sourceSocket, event: "down"}, harness.createFlowContext());
+        await harness.connection.emit({
+            type: "connectiondrop",
+            data: {
+                initial: sourceSocket,
+                socket: targetSocket,
+                created: false
+            }
+        });
+
+        // Then
+        expect(harness.document.body.querySelector(".rete-pending-connection-label")).toBeUndefined();
+        const feedback = harness.document.body.querySelector(".rete-connection-feedback")!;
+        expect(feedback).toBeDefined();
+        expect(feedback.textContent).toBe("You can't connect ImageSearch ImageSearch Region to MouseMove Boolean condition.");
+        expect(feedback.getAttribute("data-connection-feedback")).toBe("rejected");
+        expect(feedback.getAttribute("data-connection-compatibility")).toBe("incompatible");
+        expect(feedback.getAttribute("data-connection-compatibility-reason")).toBe("value-type");
+
+        // When
+        const escape = createKeyboardEvent("Escape");
+        harness.document.dispatchEvent(escape);
+        await flushPromises();
+
+        // Then
+        expect(harness.document.body.querySelector(".rete-pending-connection-label")).toBeUndefined();
+        expect(harness.document.body.querySelector(".rete-connection-feedback")).toBe(feedback);
+        expect(escape.preventDefault).not.toHaveBeenCalled();
+    });
+
+    it("does not show rejected connection feedback for same-node no-op attempts", async () => {
+        // Given
+        const outputPin: RetePinParams = {
+            id: "value-output",
+            name: "Value output",
+            family: "value",
+            direction: "output",
+            valueTypeId: "region",
+            coordinateTypeId: "window"
+        };
+        const inputPin: RetePinParams = {
+            id: "value-input",
+            name: "Value input",
+            family: "value",
+            direction: "input",
+            valueTypeId: "region",
+            coordinateTypeId: "window"
+        };
+        const harness = createMagneticDomHarness();
+        const outputElement = harness.createSocketElement(outputPin);
+        const inputElement = harness.createSocketElement(inputPin);
+        const outputSocket = createSocketWithElement("image-search", "value-output", "output", outputPin, outputElement);
+        const inputSocket = createSocketWithElement("image-search", "value-input", "input", inputPin, inputElement);
+
+        // When
+        await harness.renderSocket(outputSocket);
+        await harness.renderSocket(inputSocket);
+        await harness.flow.pick({socket: outputSocket, event: "down"}, harness.createFlowContext());
+        await harness.connection.emit({
+            type: "connectionreject",
+            data: {
+                initial: outputSocket,
+                socket: inputSocket,
+                created: false
+            }
+        });
+
+        // Then
+        expect(harness.document.body.querySelector(".rete-connection-feedback")).toBeUndefined();
+        const label = harness.document.body.querySelector(".rete-pending-connection-label");
+        expect(label?.querySelector(".rete-pending-connection-label__warning")).toBeUndefined();
+        expect(label?.getAttribute("data-connection-warning")).toBeUndefined();
     });
 });
 
