@@ -109,6 +109,8 @@ export const NodeStyledComponent = styled.div<NodeExtraData & { styles?: (props:
         justify-content: center; 
         align-items: center;
         gap: 2px;
+        position: relative;
+        z-index: 2;
     }
 
     .node-sockets-top {
@@ -317,12 +319,14 @@ export const NodeStyledComponent = styled.div<NodeExtraData & { styles?: (props:
     }
 
     .node-content {
-        grid-column: 2;
-        grid-row: 2;
+        grid-column: 1 / 4;
+        grid-row: 1 / 4;
         display: grid;
         place-items: center; 
         min-width: 0;
         min-height: 0;
+        position: relative;
+        z-index: 1;
     }
 
     ${(props) => props.styles && props.styles(props)}

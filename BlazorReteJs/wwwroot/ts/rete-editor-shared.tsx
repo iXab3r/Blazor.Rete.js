@@ -158,18 +158,24 @@ export function getPinSideAnchorPosition(
     position: RetePoint,
     pinSide: Exclude<RetePinSide, "auto">
 ): RetePoint {
-    const offset = ($socketsize + $socketmargin * 2) / 2;
+    const axisOffset = getPinSideAnchorOffset(pinSide);
     switch (pinSide) {
         case "left":
-            return {x: position.x - offset, y: position.y};
+            return {x: position.x - axisOffset, y: position.y};
         case "right":
-            return {x: position.x + offset, y: position.y};
+            return {x: position.x + axisOffset, y: position.y};
         case "bottom":
-            return {x: position.x, y: position.y + offset};
+            return {x: position.x, y: position.y + axisOffset};
         case "top":
         default:
-            return {x: position.x, y: position.y - offset};
+            return {x: position.x, y: position.y - axisOffset};
     }
+}
+
+export function getPinSideAnchorOffset(pinSide: Exclude<RetePinSide, "auto">): number {
+    return pinSide === "top" || pinSide === "bottom"
+        ? $socketsize / 2
+        : ($socketsize + $socketmargin * 2) / 2;
 }
 
 export function createSideAwareConnectionPathPoints(

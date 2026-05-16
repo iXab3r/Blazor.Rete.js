@@ -13,6 +13,7 @@ import {
     getPinDisplayName,
     getPinPreviewText,
     getPinSide,
+    getPinSideAnchorPosition,
     getSocketPin,
     normalizeRetePin,
     Position,
@@ -26,7 +27,6 @@ import {
     Schemes
 } from "../rete-editor-shared";
 import { findNearestPoint, isInsideRect, getNodeRect } from "../scaffolding/utils";
-import {$socketmargin, $socketsize} from "../vars";
 
 export type ReteSocketData = SocketData & {
     pin?: RetePinParams;
@@ -1634,19 +1634,7 @@ export function useMagneticConnectionForEditor<S extends Schemes, K = never>(
 
 function getSocketSideAnchorPosition(socket: ReteSocketData, position: Position): Position {
     const pinSide = getPinSide(getSocketPinMetadata(socket));
-    const offset = ($socketsize + $socketmargin * 2) / 2;
-
-    switch (pinSide) {
-        case "left":
-            return {x: position.x - offset, y: position.y};
-        case "right":
-            return {x: position.x + offset, y: position.y};
-        case "bottom":
-            return {x: position.x, y: position.y + offset};
-        case "top":
-        default:
-            return {x: position.x, y: position.y - offset};
-    }
+    return getPinSideAnchorPosition(position, pinSide);
 }
 
 export function useMagneticConnection<S extends Schemes, K = never>(

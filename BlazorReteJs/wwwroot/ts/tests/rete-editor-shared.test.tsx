@@ -25,6 +25,8 @@ const {
     createReteOutputLauncherArmEvent,
     createReteOutputLauncherMenuController,
     createReteOutputLauncherMenuRows,
+    getPinSideAnchorOffset,
+    getPinSideAnchorPosition,
     getPrimaryReteOutputLauncherOption,
     getReteOutputLauncherOptionByMenuIndex,
     getSocketPin,
@@ -37,6 +39,7 @@ const {
     selectReteOutputLauncherMenuOption
 } = require("../rete-editor-shared") as typeof import("../rete-editor-shared");
 const {ReteCustomSocketComponent} = require("../rete-custom-socket-component") as typeof import("../rete-custom-socket-component");
+const {$socketmargin, $socketsize} = require("../vars") as typeof import("../vars");
 import type {RetePinParams} from "../rete-editor-shared";
 
 describe("Rete typed pin bridge model", () => {
@@ -264,6 +267,23 @@ describe("Rete typed pin bridge model", () => {
         expect(getSocketRailSlot(preCondition, "top")).toBe("start");
         expect(getSocketRailSlot(postCondition, "bottom")).toBe("end");
         expect(getSocketRailSlot(valueOutput, "right")).toBe("center");
+    });
+
+    it("uses axis-aware socket anchor offsets for visible socket centers", () => {
+        // Given
+        const center = {x: 100, y: 200};
+        const verticalOffset = $socketsize / 2;
+        const horizontalHoverOffset = ($socketsize + $socketmargin * 2) / 2;
+
+        // When / Then
+        expect(getPinSideAnchorOffset("top")).toBe(verticalOffset);
+        expect(getPinSideAnchorOffset("bottom")).toBe(verticalOffset);
+        expect(getPinSideAnchorOffset("left")).toBe(horizontalHoverOffset);
+        expect(getPinSideAnchorOffset("right")).toBe(horizontalHoverOffset);
+        expect(getPinSideAnchorPosition(center, "top")).toEqual({x: 100, y: 200 - verticalOffset});
+        expect(getPinSideAnchorPosition(center, "bottom")).toEqual({x: 100, y: 200 + verticalOffset});
+        expect(getPinSideAnchorPosition(center, "left")).toEqual({x: 100 - horizontalHoverOffset, y: 200});
+        expect(getPinSideAnchorPosition(center, "right")).toEqual({x: 100 + horizontalHoverOffset, y: 200});
     });
 
     it("builds accepted connection control points from the rendered pin sides", () => {
