@@ -174,7 +174,7 @@ Current Rete packages:
 
 ## Build And Test
 
-From `Sources/BlazorReteJs`:
+From `BlazorReteJs`:
 
 ```powershell
 npm test
@@ -184,7 +184,7 @@ npm run build
 From repo root:
 
 ```powershell
-dotnet build Sources\BlazorReteJs\BlazorReteJs.csproj
+dotnet build BlazorReteJs\BlazorReteJs.csproj
 ```
 
 The TypeScript build bundles `wwwroot/ts/*.ts*` to `wwwroot/js` as ES modules.

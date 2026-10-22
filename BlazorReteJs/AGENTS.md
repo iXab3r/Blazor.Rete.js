@@ -1,6 +1,6 @@
 # BlazorReteJs Agent Notes
 
-These instructions apply to `Sources/BlazorReteJs`.
+These instructions apply to `BlazorReteJs`.
 
 ## Required Context
 

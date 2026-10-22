@@ -1,5 +1,7 @@
 # Blazor.Rete.js
 
+Contributor and agent guidance: [AGENTS.md](AGENTS.md).
+
 Blazor.Rete.js is a Blazor wrapper around [Rete.js v2](https://retejs.org/).
 It renders a Rete/React graph editor inside a Blazor component while exposing
 C# APIs for nodes, connections, selection, layout, dock templates, hosted Blazor
